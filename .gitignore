@@ -1,4 +1,19 @@
 __pycache__/
-build/
+*.py[cod]
 .pytest_cache/
 .venv/
+venv/
+build/
+dist/
+*.spec
+*.log
+*_conversion_debug.txt
+*_Release/
+*_release/
+*.tmp
+*.bak
+.DS_Store
+
+# Local config overrides that are generated or environment-specific
+config/effect_overrides.json
+config/sheet_overrides.json

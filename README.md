@@ -1,67 +1,13 @@
 # Beat Banger Legacy → Release Converter
 
-This project converts Beat Banger Legacy mods into the Release mod structure used by the game. The main principle is to keep only information that has a verifiable source, keep timing deterministic, and report ambiguous cases instead of inventing values without evidence.
+This project converts Legacy Beat Banger mods into the Release mod layout used by the game. The implementation is organized around a small root entry point and a dedicated `src/` package, while examples and runtime defaults live under the project root.
 
-The recommended entry point is `convert_mod.py`, although the project also includes a Tkinter-based graphical interface for browsing a Legacy mod library and converting mods from a library view.
-
-## Current status
-
-The project is aimed at a functional and conservative conversion workflow:
-
-- reading `chart.cfg` and `meta.cfg`
-- shared timeline calculation for notes, animations, effects, audio, and backgrounds
-- generation of `notes.cfg`, `keyframes.cfg`, `editor_cache.cfg`, `meta.cfg`, `mod.cfg`, `settings.cfg`, and related files
-- copying and validating image/audio assets
-- GUI support for browsing and converting multiple mods from a folder
-- detailed diagnostics with warnings, errors, and final summaries
-
-## What it converts
-
-The current pipeline covers:
-
-- notes and note-state transitions
-- animations and keyframes
-- sprite-sheet visual effects
-- backgrounds
-- audio loops
-- one-shot audio events
-- voice banks
-- Release metadata and config
-- safe copying of referenced assets
-
-The output is structured as a Release mod with a scenario folder and the expected configuration files.
-
-## Requirements
-
-You need Python 3.10 or newer.
-
-Core dependencies:
-
-- Python 3.10+
-- Tkinter for the GUI
-- Pillow for sprite-sheet inspection and thumbnails
-- pytest for running tests
-
-Recommended installation:
-
-```bash
-python -m pip install Pillow pytest
-```
-
-On Arch Linux, Tkinter is usually provided by the `tk` package:
-
-```bash
-sudo pacman -S tk
-```
-
-## Project structure
+## Project layout
 
 ```text
 converter/
 ├── README.md
 ├── main.py
-├── convert_mod.py
-├── tkinter_app.py
 ├── chart.cfg
 ├── effect_overrides.json
 ├── sheet_overrides.json
@@ -103,49 +49,71 @@ converter/
 ├── tools/
 │   ├── batch_convert.py
 │   └── generate_sheet_overrides.py
-└── .venv/
+├── .venv/
+├── build/
+├── .pytest_cache/
+└── __pycache__/
 ```
 
-Files in the project root are compatibility shims to preserve older scripts; the main implementation lives under `src/`.
+The main logic lives under `src/`. The root-level `main.py` is the current CLI entry point and delegates to `src.convert_mod` and `src.tkinter_app`.
 
-## Command-line usage
+## Requirements
+
+- Python 3.10+
+- Tkinter for the GUI
+- Pillow for sprite-sheet inspection and thumbnails
+- pytest for running tests
+
+Install dependencies:
+
+```bash
+python -m pip install Pillow pytest
+```
+
+On Arch Linux, Tkinter is usually provided by the `tk` package:
+
+```bash
+sudo pacman -S tk
+```
+
+## Usage
 
 The input must be a Legacy mod folder containing `chart.cfg`. `meta.cfg` is optional.
 
 ### Basic conversion
 
 ```bash
-python convert_mod.py /path/to/legacy_mod /path/to/output
+python main.py /path/to/legacy_mod /path/to/output
 ```
 
 If no output path is provided, a sibling folder with the `_Release` suffix is created:
 
 ```bash
-python convert_mod.py /path/to/legacy_mod
+python main.py /path/to/legacy_mod
 ```
 
-### Use a separate assets directory
+### Separate assets directory
 
 ```bash
-python convert_mod.py \
+python main.py \
   /path/to/legacy_mod \
   /path/to/output \
   --assets-dir /path/to/assets
 ```
 
-### Do not copy assets
+### Skip asset copying
 
 ```bash
-python convert_mod.py \
+python main.py \
   /path/to/legacy_mod \
   /path/to/output \
   --no-copy-assets
 ```
 
-### Disable interactive FX sprite-sheet prompts
+### Disable interactive effect sheet prompts
 
 ```bash
-python convert_mod.py \
+python main.py \
   /path/to/legacy_mod \
   /path/to/output \
   --no-interactive
@@ -154,60 +122,45 @@ python convert_mod.py \
 ### Omit `last_transition`
 
 ```bash
-python convert_mod.py \
+python main.py \
   /path/to/legacy_mod \
   /path/to/output \
   --no-last-transition
 ```
 
-### Customize the Release scenario name
+### Customize the scenario folder name
 
 ```bash
-python convert_mod.py \
+python main.py \
   /path/to/legacy_mod \
   /path/to/output \
   --scenario-name "Girl Brat"
 ```
 
-### Open the GUI from the main entry point
+### Open the GUI
 
 ```bash
-python convert_mod.py --gui
+python main.py --gui
 ```
 
-## Mod library GUI
+## GUI / mod library
 
-The Tkinter GUI behaves like a small Legacy mod library rather than only a conversion form.
+The Tkinter interface operates as a small mod library and conversion dashboard:
 
-It can be launched with:
+- choose a folder containing multiple Legacy mods
+- persist the library path in user config
+- discover mods automatically
+- view conversion cards with thumbnails and metadata
+- convert individual mods from the library view
+- refresh the list and keep the UI responsive while conversion runs in the background
 
-```bash
-python tkinter_app.py --gui
-```
-
-or from the main entry point:
-
-```bash
-python convert_mod.py --gui
-```
-
-The interface allows:
-
-- choosing a root folder containing Legacy mods
-- saving the library path persistently
-- automatically discovering mods
-- showing cards with thumbnails, name, artist, song, and path
-- converting each mod with a single click
-- refreshing the library
-- running conversion in the background without blocking the UI
-
-The configuration path is stored in:
+The library settings are stored under:
 
 ```text
 ~/.config/BeatBangerConverter7/settings.json
 ```
 
-or in:
+or:
 
 ```text
 $XDG_CONFIG_HOME/BeatBangerConverter7/settings.json
@@ -215,163 +168,68 @@ $XDG_CONFIG_HOME/BeatBangerConverter7/settings.json
 
 when `XDG_CONFIG_HOME` is defined.
 
-## Generated Release output structure
+## What the converter handles
 
-The converter generates a structure like this:
+The current pipeline covers:
 
-```text
-<mod_release>/
-├── act.cfg
-├── meta.cfg
-├── thumb.png
-└── <scenario>/
-    ├── editor_cache.cfg
-    ├── meta.cfg
-    ├── thumb.png
-    ├── audio/
-    ├── images/
-    └── config/
-        ├── asset.cfg
-        ├── keyframes.cfg
-        ├── meta.cfg
-        ├── mod.cfg
-        ├── notes.cfg
-        └── settings.cfg
-```
+- notes and their state transitions
+- animations and keyframes
+- sprite-sheet visual effects
+- backgrounds
+- audio loops and one-shot events
+- voice banks
+- Release metadata and configuration files
+- validation and safe copying of referenced assets
 
-Assets are flattened automatically into `images/` and `audio/`, and the converter validates that no name collisions occur silently.
+The generated Release output keeps the scenario folder structure expected by the game and flattens asset files into the corresponding `images/` and `audio/` directories.
 
 ## Timing model
 
-The project uses a shared `Timeline` for notes, animations, effects, audio, backgrounds, and voice banks.
-
-Frame-to-timestamp conversion is centralized as:
+The converter uses a shared timeline for notes, animations, effects, audio, backgrounds, and voice banks. The frame-to-time conversion follows the same rule across the pipeline:
 
 ```python
 seconds_per_frame = 30 / BPM
 timestamp = frame * seconds_per_frame - note_offset
 ```
 
-The project converts through the Timeline to keep behavior consistent. Negative timestamps are clamped to `0.0`, with a warning recorded when this happens.
+Negative timestamps are clamped to `0.0` and recorded as warnings when needed. The generated `settings.cfg` intentionally keeps `song_offset` at `0.0` to avoid double-applying the Legacy offset.
 
-Legacy `note_offset` is already folded into the generated timestamps, and the output `settings.cfg` uses:
+## Diagnostics and validation
 
-```json
-"song_offset": 0.0
-```
-
-to avoid applying the offset twice.
-
-## Notes and spawn states
-
-The converter handles `half_spawn`, `quarter_spawn`, `eighth_spawn`, and `no_spawn` with deterministic precedence when collisions occur:
-
-```text
-no_spawn > eighth_spawn > quarter_spawn > half_spawn
-```
-
-If the chart contains mutually incompatible states on the same frame, conversion records an error instead of assuming an arbitrary interpretation.
-
-## Animations and FX
-
-Animations are collected from:
-
-- `initial_data.animation`
-- `transitions[*].animation`
-- `last_transition.animation`
-
-Legacy visual effects are treated as one-shot sprite-sheet events rather than loops.
-
-The system uses `effect_overrides.json` to define known layouts and durations and supports patterns such as:
-
-```json
-{
-  "impact_*.png": {
-    "sheet_data": {
-      "h": 3,
-      "v": 2,
-      "total": 6
-    },
-    "duration": 0.5
-  }
-}
-```
-
-Frame-specific durations are also supported when an effect behaves differently depending on when it is triggered.
-
-## Audio, voice banks, and backgrounds
-
-The converter distinguishes between:
-
-- `sound_fx` / loops
-- `transition_sound` / `climax_sound` converted to `sound_oneshot`
-- voice banks with real file resolution and path handling
-- backgrounds represented as simple paths, lists, or objects
-
-The system tries to preserve the semantics of the Legacy chart without inventing Release fields that do not have a confirmed mapping.
-
-## Asset resolution and safety
-
-The project centralizes asset resolution in `src/asset_resolver.py`.
-
-Resolution behavior:
-
-- checks common paths first
-- supports basename fallback lookup
-- compares case-insensitively
-- works with mods created on case-insensitive filesystems and converted on Linux
-- rejects `../` references that escape the asset root
-- avoids arbitrary decisions when the reference is ambiguous
-
-The final asset copy step validates:
-
-- file-name conflicts
-- missing files
-- identical duplicates that may be reused
-- different files with the same name that trigger an error instead of being silently overwritten
-
-## Diagnostics
-
-Each conversion generates a debug log similar to:
+Each conversion produces a debug log such as:
 
 ```text
 <output>_conversion_debug.txt
 ```
 
-It includes useful information such as:
+It includes details such as:
 
-- BPM
-- `note_offset`
-- `last_beat`
-- seconds per frame
-- note counts
-- note-state changes
-- collisions
-- generated FX
-- loops and one-shots
-- voice banks
-- copied and missing assets
-- warnings and errors
-
-The CLI and GUI both receive structured summary data from this process.
+- BPM and note offset
+- last beat and timeline data
+- counts of notes and state changes
+- colliding spawn states and warnings
+- generated effects and loops
+- copied vs. missing assets
+- voice-bank resolution details
+- summary of conversion issues
 
 ## Tests
 
-The project includes conversion and validation tests. To run the full suite:
+Run the project test suite with:
 
 ```bash
 pytest -q
 ```
 
-There is also a conversion helper suite:
+The conversion helper script is also available:
 
 ```bash
 python tests/run_converters_test.py
 ```
 
-## Standalone build with Nuitka
+## Build notes
 
-The project can be packaged as native executables.
+The project can be packaged with Nuitka for standalone execution.
 
 Example for Linux:
 
@@ -379,7 +237,7 @@ Example for Linux:
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -U "Nuitka[app]" Pillow
-python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build tkinter_app.py
+python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build main.py
 ```
 
 On Windows:
@@ -388,44 +246,23 @@ On Windows:
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U "Nuitka[app]" Pillow
-python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build tkinter_app.py
+python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build main.py
 ```
 
-The goal is to prepare a self-contained binary, though the main development flow remains source-based Python execution.
+## Development workflow
 
-## Recommended development workflow
+When adding support for a new Legacy property:
 
-When adding support for another Legacy property:
-
-1. compare with a real Legacy mod
-2. verify the corresponding format in a Release mod reference
-3. implement the conversion in the parser or converter
-4. add a regression test
-5. run the relevant suite
-6. convert a real mod and verify the result
+1. compare against a real mod and the corresponding Release format
+2. implement the conversion in the relevant parser or converter
+3. add a regression test covering the behavior
+4. run the focused validation suite
+5. verify the result on a real mod sample
 
 ## Known limitations
 
-Not everything in Release can be reconstructed exactly from Legacy alone. For example:
-
-- effect durations with no clear representation in Legacy
-- Release metadata with no confirmed equivalent
-- creative settings that do not have a validated destination
-- unknown sprite-sheet layouts
-- missing or ambiguous assets
-
-When this happens, the converter reports the case instead of inventing a result.
+Some Release fields cannot be reconstructed exactly from Legacy data alone. In those cases the converter intentionally records the uncertainty instead of inventing unsupported values.
 
 ## License
 
 See the repository for the applicable license information.
-
-## Credits
-
-Beat Banger Legacy → Release Converter is an independent project created to make the transition from Beat Banger Legacy mods to the Release format easier.
-
-Consulta el repositorio para ver la licencia aplicable.
-
-## Créditos
-
-Beat Banger Legacy → Release Converter es una herramienta independiente para facilitar la transición desde mods legacy al formato Release del juego.
