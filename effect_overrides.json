@@ -1,0 +1,136 @@
+{
+  "fx.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "Impact_Fx.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "cum_fx.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "shirt_rip.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "cumfx.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "bra_rip.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "impact.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "cum.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "heart 2 lw.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "CUM_fx.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "hearts.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5
+  },
+  "jaca.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "cum_pound.png": {
+    "sheet_data": {
+      "h": 6,
+      "v": 4,
+      "total": 24
+    },
+    "duration": 4.0
+  },
+  "_README_EXAMPLE": {
+    "durations": {
+      "54": 0.5,
+      "110": 0.3
+    },
+    "_comment": "Use frame-specific durations when the same FX can have different playback lengths."
+  },
+  "impact_*.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    },
+    "duration": 0.5,
+    "_comment": "Verified default for Impact-style 6-frame FX, including names such as impact_1.png."
+  },
+  "redbra_rip.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    }
+  },
+  "blackshirt_rip.png": {
+    "sheet_data": {
+      "h": 3,
+      "v": 2,
+      "total": 6
+    }
+  }
+}
