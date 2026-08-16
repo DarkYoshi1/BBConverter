@@ -4,7 +4,15 @@ A local converter for transforming **Beat Banger Legacy mods** into the **Releas
 
 The project is designed around a conservative conversion philosophy: preserve information when its meaning is known, keep timing deterministic, resolve and copy referenced assets safely, and report information that cannot be verified instead of silently inventing data.
 
-> **Current status:** the converter is actively being developed. The recommended production entry point is `convert_mod.py`; `converter.py` is retained for the smaller/legacy conversion API and supporting workflows.
+> **Current status:** **v1.0 stable release.** The recommended production entry point is `convert_mod.py`. `converter.py` is retained for the smaller/legacy conversion API and supporting workflows.
+
+## v1.0
+
+Version 1.0 is the first stable release of BBConverter.
+
+The release provides the complete Legacy → Release conversion pipeline, including notes, animations, visual FX, backgrounds, audio, voice banks, metadata, asset handling, diagnostics, and the Legacy mod library GUI.
+
+The project can be used directly from source or packaged as a standalone executable for distribution.
 
 ## Features
 
@@ -12,16 +20,16 @@ The project is designed around a conservative conversion philosophy: preserve in
 
 The converter can process and write:
 
-- Notes and note state changes
-- Animations and animation keyframes
-- One-shot visual FX
-- Background changes
-- Sound loops
-- One-shot audio
-- Voice banks
-- Metadata and Release configuration
-- Referenced images and audio assets
-- Conversion diagnostics
+* Notes and note state changes
+* Animations and animation keyframes
+* One-shot visual FX
+* Background changes
+* Sound loops
+* One-shot audio
+* Voice banks
+* Metadata and Release configuration
+* Referenced images and audio assets
+* Conversion diagnostics
 
 The Release writer generates the expected scenario structure, including `notes.cfg`, `keyframes.cfg`, `editor_cache.cfg`, metadata, settings, and asset directories.
 
@@ -92,7 +100,7 @@ Known verified defaults currently include:
 
 These defaults are only used for recognized sheet layouts. Unknown layouts without a verified duration are reported instead of being assigned an arbitrary value.
 
-## Audio mapping
+### Audio mapping
 
 Release does not use the Legacy `transition_sound` field as a separate output category.
 
@@ -131,14 +139,14 @@ Example:
 
 The original timestamps are preserved.
 
-## Voice banks
+### Voice banks
 
 Voice banks support the Legacy representations handled by the parser, including:
 
-- `name`
-- `path`
-- `voice_paths`
-- Lists of voice-bank entries
+* `name`
+* `path`
+* `voice_paths`
+* Lists of voice-bank entries
 
 An empty bank does **not** cause the converter to search the disk for arbitrary audio files.
 
@@ -153,9 +161,9 @@ If a voice bank was active and Legacy explicitly clears it, the Release output c
 
 Referenced voice files are copied to the Release `audio/` directory.
 
-## Mod library GUI
+### Mod library GUI
 
-The Tkinter GUI now works as a small **Legacy mod library** rather than only as a conversion form.
+The Tkinter GUI works as a small **Legacy mod library** rather than only as a conversion form.
 
 Launch it with:
 
@@ -163,18 +171,24 @@ Launch it with:
 python tkinter_app.py --gui
 ```
 
+or through the main conversion entry point:
+
+```bash
+python convert_mod.py --gui
+```
+
 The GUI provides:
 
-- A `Choose folder` button for selecting the Legacy mod library root
-- Persistent library-folder settings
-- Automatic discovery of Legacy mods
-- A 3-column grid of mod cards
-- Mod thumbnails when available
-- Mod title, artist, song information, and path
-- A `Convert to Release` button on each mod
-- `Refresh` for rescanning the library
-- Background conversion so the interface does not need to block during conversion
-- The same `build_release_mod()` conversion pipeline used by the CLI
+* A `Choose folder` button for selecting the Legacy mod library root
+* Persistent library-folder settings
+* Automatic discovery of Legacy mods
+* A 3-column grid of mod cards
+* Mod thumbnails when available
+* Mod title, artist, song information, and path
+* A `Convert to Release` button on each mod
+* `Refresh` for rescanning the library
+* Background conversion so the interface does not need to block during conversion
+* The same `build_release_mod()` conversion pipeline used by the CLI
 
 The selected library root is stored at:
 
@@ -194,12 +208,12 @@ If the selected folder itself contains `chart.cfg`, it is treated as a single mo
 
 ## Requirements
 
-Recommended:
+For running BBConverter from source:
 
-- Python 3.10+
-- Tkinter for the GUI
-- Pillow for sprite-sheet inspection and thumbnails
-- pytest for tests
+* Python 3.10+
+* Tkinter for the GUI
+* Pillow for sprite-sheet inspection and thumbnails
+* pytest for tests
 
 Install Pillow:
 
@@ -218,6 +232,14 @@ On Arch Linux, Tkinter is normally provided by the `tk` package:
 ```bash
 sudo pacman -S tk
 ```
+
+### Standalone release
+
+The v1.0 release can also be distributed as a compiled standalone executable.
+
+End users running the compiled release do not need to install Python, Pillow, or pytest separately.
+
+The Nuitka build instructions below are intended for developers who want to build the executable from source.
 
 ## Project structure
 
@@ -503,15 +525,15 @@ Consecutive duplicate animation states are removed.
 Effect overrides live in:
 
 ```text
- effect_overrides.json
+effect_overrides.json
 ```
 
 Each entry may contain:
 
-- `sheet_data`
-- `duration`
-- `durations`
-- comments for maintainers
+* `sheet_data`
+* `duration`
+* `durations`
+* Comments for maintainers
 
 For example:
 
@@ -552,8 +574,8 @@ Looping sound events are written separately from one-shot audio.
 The converter distinguishes between:
 
 ```text
-property absent      → keep the current loop state
-property explicitly empty → stop/clear the loop
+property absent             → keep the current loop state
+property explicitly empty   → stop/clear the loop
 ```
 
 This distinction prevents a missing Legacy property from accidentally stopping a loop.
@@ -580,12 +602,12 @@ Asset resolution is centralized in `asset_resolver.py`.
 
 The resolver:
 
-- Checks common paths first
-- Supports basename fallback searches
-- Performs case-insensitive matching
-- Works with mods created on case-insensitive filesystems and converted on Linux
-- Rejects `../` references that escape the asset root
-- Avoids silently choosing arbitrary files when the reference is ambiguous
+* Checks common paths first
+* Supports basename fallback searches
+* Performs case-insensitive matching
+* Works with mods created on case-insensitive filesystems and converted on Linux
+* Rejects `../` references that escape the asset root
+* Avoids silently choosing arbitrary files when the reference is ambiguous
 
 Common supported formats include:
 
@@ -605,9 +627,9 @@ audio/
 
 If two different source files would produce the same basename, the converter checks their contents.
 
-- Identical files may safely reuse the existing copy.
-- Different files produce an asset conflict.
-- Existing files are never silently overwritten by a different source file.
+* Identical files may safely reuse the existing copy.
+* Different files produce an asset conflict.
+* Existing files are never silently overwritten by a different source file.
 
 Conversion summaries include:
 
@@ -667,21 +689,21 @@ A conversion creates a debug report named similar to:
 
 Diagnostics can include:
 
-- BPM
-- `note_offset`
-- `last_beat`
-- seconds per frame
-- note state changes
-- note collisions
-- note counts
-- FX counts
-- audio counts
-- voice-bank counts
-- copied assets
-- missing assets
-- asset conflicts
-- warnings
-- errors
+* BPM
+* `note_offset`
+* `last_beat`
+* seconds per frame
+* note state changes
+* note collisions
+* note counts
+* FX counts
+* audio counts
+* voice-bank counts
+* copied assets
+* missing assets
+* asset conflicts
+* warnings
+* errors
 
 The conversion pipeline also returns structured summary/issue information to the GUI and CLI.
 
@@ -747,25 +769,25 @@ Current suite status:
 
 The tests cover, among other things:
 
-- Shared timeline conversion
-- Notes and note-state transitions
-- `no_spawn`
-- `last_transition`
-- Animation conversion
-- FX sheet data and durations
-- FX registration in `editor_cache.cfg`
-- One-shot audio mapping
-- Absence of Release `transition_sound`
-- Sound loops
-- Voice-bank parsing and asset copying
-- Background conversion
-- Metadata and deterministic IDs
-- Case-insensitive asset resolution
-- Path traversal protection
-- Asset collision detection
-- Mod-library discovery
-- GUI/library behavior
-- Full conversion paths
+* Shared timeline conversion
+* Notes and note-state transitions
+* `no_spawn`
+* `last_transition`
+* Animation conversion
+* FX sheet data and durations
+* FX registration in `editor_cache.cfg`
+* One-shot audio mapping
+* Absence of Release `transition_sound`
+* Sound loops
+* Voice-bank parsing and asset copying
+* Background conversion
+* Metadata and deterministic IDs
+* Case-insensitive asset resolution
+* Path traversal protection
+* Asset collision detection
+* Mod-library discovery
+* GUI/library behavior
+* Full conversion paths
 
 Run the converter-focused helper tests with:
 
@@ -778,6 +800,8 @@ python tests/run_converters_test.py
 The project can be packaged as native executables for Linux and Windows.
 
 Nuitka is **not a cross-compiler** for this workflow. Build the Linux executable on Linux and the Windows executable on Windows.
+
+The v1.0 release is already compiled. These instructions are provided for developers who want to reproduce or modify the build.
 
 ### Linux
 
@@ -921,21 +945,15 @@ Some Release information cannot be reconstructed perfectly from Legacy alone.
 
 Examples include:
 
-- FX durations that are not represented in Legacy
-- Release-only metadata without a Legacy equivalent
-- Creative/editor settings that have no confirmed Release destination
-- Unknown spritesheet layouts
-- Missing or ambiguous source assets
+* FX durations that are not represented in Legacy
+* Release-only metadata without a Legacy equivalent
+* Creative/editor settings that have no confirmed Release destination
+* Unknown sprite-sheet layouts
+* Missing or ambiguous source assets
 
 The converter intentionally reports these cases instead of silently fabricating data.
 
 A conversion with zero errors means the converter did not find a structural contradiction that prevented generation. It does **not** prove that every visual/audio detail is semantically identical to an original Release mod. Testing the generated mod in-game remains necessary.
-
-## Open-source development
-
-The project is intended to remain understandable and maintainable as a modding tool. Keeping the source available makes it easier for the community to inspect mappings, report bugs, add support for new Legacy structures, and compare behavior against future Release versions.
-
-No specific open-source license is declared by this README; add a `LICENSE` file and choose the license you want before publishing the repository.
 
 ## Conversion pipeline
 
@@ -964,3 +982,11 @@ Release mod
 ```
 
 The goal is a reproducible and auditable Legacy → Release conversion process rather than a converter that silently guesses when the source data is ambiguous.
+
+## License
+
+See the repository for the applicable license information.
+
+## Credits
+
+BBConverter is an independent community tool created to make the transition from Beat Banger Legacy mods to Release mods easier.
