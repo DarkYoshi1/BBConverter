@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from models import Timeline
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
 
 
 @dataclass

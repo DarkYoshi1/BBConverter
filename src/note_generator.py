@@ -3,8 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from models import Timeline
-from timeline import Change, SPAWN_INTERVAL
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
+try:
+    from .timeline import Change, SPAWN_INTERVAL
+except ImportError:  # pragma: no cover
+    from src.timeline import Change, SPAWN_INTERVAL
+
 
 
 @dataclass

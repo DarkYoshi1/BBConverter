@@ -38,7 +38,7 @@ def _run_conversion_worker(app, input_mod: str, output_mod: str, assets_dir: Opt
                           include_last_transition: bool, scenario_name: Optional[str],
                           on_done=None):
     try:
-        from convert_mod import build_release_mod
+        from .convert_mod import build_release_mod
 
         output_mod = output_mod or _default_output_for(input_mod)
         summary, issues = build_release_mod(
@@ -85,7 +85,7 @@ def launch_gui():
     except ImportError as exc:  # pragma: no cover - environment-specific
         raise RuntimeError("Tkinter is not available in this Python installation") from exc
 
-    from mod_library import discover_mods, load_settings, save_settings
+    from .mod_library import discover_mods, load_settings, save_settings
 
     root = tk.Tk()
     root.title("Beat Banger Legacy → Release Converter")
@@ -285,7 +285,7 @@ def main():
     if not args.input_mod:
         raise SystemExit("You must provide an input mod directory or use --gui to open the graphical interface.")
 
-    from convert_mod import build_release_mod
+    from .convert_mod import build_release_mod
 
     input_mod = os.path.abspath(args.input_mod)
     output_mod = args.output_mod or _default_output_for(input_mod)

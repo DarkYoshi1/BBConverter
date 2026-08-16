@@ -5,15 +5,15 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, ROOT)
 
-from legacy_parser import parse_legacy_chart
-from models import Timeline
-from timeline import build_timeline, build_changes
-from note_generator import generate_notes
-from animation_converter import convert_animations
-from effect_converter import convert_effects
-from sound_loop_converter import convert_sound_loops
-from sound_fx_converter import convert_sound_fx
-from background_converter import convert_backgrounds
+from src.legacy_parser import parse_legacy_chart
+from src.models import Timeline
+from src.timeline import build_timeline, build_changes
+from src.note_generator import generate_notes
+from src.animation_converter import convert_animations
+from src.effect_converter import convert_effects
+from src.sound_loop_converter import convert_sound_loops
+from src.sound_fx_converter import convert_sound_fx
+from src.background_converter import convert_backgrounds
 
 
 def load_chart():
@@ -91,9 +91,9 @@ def test_effect_override_metadata_is_preserved_when_verified():
 
 
 def test_release_keyframes_match_example_schema_for_sfx_fx_and_voice_bank():
-    from sound_loop_converter import SoundLoop
-    from voice_bank_converter import VoiceBankEntry
-    from release_writer import write_release_keyframes
+    from src.sound_loop_converter import SoundLoop
+    from src.voice_bank_converter import VoiceBankEntry
+    from src.release_writer import write_release_keyframes
 
     loops = [SoundLoop(0, 0.0, ["dryplap01.mp3", "dryplap02.mp3"], True, "initial_data")]
     voices = [VoiceBankEntry(30, 30.0, {"voice_paths": ["voice_a.mp3", "voice_b.mp3"]})]
@@ -120,8 +120,8 @@ def test_release_keyframes_match_example_schema_for_sfx_fx_and_voice_bank():
 
 
 def test_voice_bank_name_resolves_real_files_from_legacy_voice_folder(tmp_path):
-    from models import Timeline
-    from voice_bank_converter import convert_voice_banks
+    from src.models import Timeline
+    from src.voice_bank_converter import convert_voice_banks
 
     bank_dir = tmp_path / "voice" / "open_moans_long"
     bank_dir.mkdir(parents=True)
@@ -191,8 +191,8 @@ def test_effect_duration_can_be_overridden_per_frame():
             "initial_data": {},
             "transitions": {10: {"effects": "hearts.png"}, 20: {"effects": "hearts.png"}},
         }
-        from models import Timeline
-        from effect_converter import convert_effects
+        from src.models import Timeline
+        from src.effect_converter import convert_effects
         fx = convert_effects(parsed, timeline=Timeline(120, 0, 32, []), interactive_sheets=False)
         by_frame = {e.frame: e.duration for e in fx.keyframes}
         assert by_frame[10] == 0.3
@@ -203,8 +203,8 @@ def test_effect_duration_can_be_overridden_per_frame():
 
 
 def test_release_effects_require_and_emit_duration_without_invented_fields():
-    from effect_converter import EffectKey
-    from release_writer import write_release_keyframes
+    from src.effect_converter import EffectKey
+    from src.release_writer import write_release_keyframes
 
     path = os.path.join(os.getcwd(), "tmp_effect_keyframes_test.cfg")
     write_release_keyframes(
@@ -219,8 +219,8 @@ def test_release_effects_require_and_emit_duration_without_invented_fields():
 
 
 def test_release_effects_reject_missing_duration():
-    from effect_converter import EffectKey
-    from release_writer import write_release_keyframes
+    from src.effect_converter import EffectKey
+    from src.release_writer import write_release_keyframes
 
     path = os.path.join(os.getcwd(), "tmp_effect_keyframes_invalid.cfg")
     try:
@@ -239,7 +239,7 @@ def test_release_effects_reject_missing_duration():
 
 def test_editor_cache_registers_effect_spritesheets(tmp_path):
     from types import SimpleNamespace
-    from convert_mod import _write_scenario_release_files
+    from src.convert_mod import _write_scenario_release_files
 
     scenario = tmp_path / "scenario"
     anim = SimpleNamespace(keyframes=[SimpleNamespace(animation="Idle.png")])
@@ -258,8 +258,8 @@ def test_editor_cache_registers_effect_spritesheets(tmp_path):
 
 
 def test_transition_sounds_are_written_as_sound_oneshot_only(tmp_path):
-    from release_writer import write_release_keyframes
-    from sound_fx_converter import TransitionSound
+    from src.release_writer import write_release_keyframes
+    from src.sound_fx_converter import TransitionSound
 
     out = tmp_path / "keyframes.cfg"
     write_release_keyframes(
@@ -281,7 +281,7 @@ def test_transition_sounds_are_written_as_sound_oneshot_only(tmp_path):
 
 def test_effect_pattern_override_resolves_impact_variants(monkeypatch):
     import effect_converter
-    from models import Timeline
+    from src.models import Timeline
 
     old = effect_converter.OVERRIDES
     try:
@@ -311,7 +311,7 @@ def test_effect_pattern_override_resolves_impact_variants(monkeypatch):
 
 def test_unknown_effect_without_override_remains_unresolved():
     import effect_converter
-    from models import Timeline
+    from src.models import Timeline
 
     old = effect_converter.OVERRIDES
     try:
@@ -335,8 +335,8 @@ def test_unknown_effect_without_override_remains_unresolved():
 
 
 def test_transition_sounds_are_merged_into_sound_oneshot(tmp_path):
-    from release_writer import write_release_keyframes
-    from sound_fx_converter import SoundFXTrigger, TransitionSound
+    from src.release_writer import write_release_keyframes
+    from src.sound_fx_converter import SoundFXTrigger, TransitionSound
 
     out = tmp_path / "keyframes.cfg"
     write_release_keyframes(

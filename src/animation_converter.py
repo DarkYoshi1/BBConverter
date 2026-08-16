@@ -5,14 +5,21 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from models import Timeline
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
 
 DEFAULT_SHEET_H = 3
 DEFAULT_SHEET_V = 2
 DEFAULT_SHEET_TOTAL = 6
 SHEET_DATA_OVERRIDES: Dict[str, dict] = {}
 
-_OVERRIDES_PATH = os.path.join(os.path.dirname(__file__), "sheet_overrides.json")
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "config", "sheet_overrides.json")
+if not os.path.isfile(_OVERRIDES_PATH):
+    _OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "sheet_overrides.json")
 try:
     with open(_OVERRIDES_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -120,7 +127,7 @@ def check_assets(result: AnimationConversionResult, assets_dir: Optional[str]) -
     if not assets_dir:
         result.warnings.append("No --assets-dir provided: skipping animation asset checks.")
         return
-    from asset_resolver import resolve_asset
+    from .asset_resolver import resolve_asset
     if not os.path.isdir(assets_dir):
         result.errors.append(f"--assets-dir '{assets_dir}' does not exist or is not a directory.")
         return

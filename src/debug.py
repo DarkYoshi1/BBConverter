@@ -1,6 +1,14 @@
 from typing import List
-from timeline import Change, Collision
-from note_generator import Note
+try:
+    from .timeline import Change, Collision
+except ImportError:  # pragma: no cover
+    from src.timeline import Change, Collision
+
+try:
+    from .note_generator import Note
+except ImportError:  # pragma: no cover
+    from src.note_generator import Note
+
 
 TYPE_LABEL = {0: "0 (half)", 1: "1 (quarter)", 2: "2 (eighth)", None: "NO SPAWN"}
 

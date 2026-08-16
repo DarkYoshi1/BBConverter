@@ -2,21 +2,60 @@ from __future__ import annotations
 
 import argparse
 
-from animation_converter import convert_animations
-from comparator import (
-    compare_keyframes,
-    compare_notes,
-    format_comparison_report,
-    format_keyframe_comparison_report,
-    parse_release_keyframes,
-    parse_release_notes,
-)
-from debug import write_debug_file
-from legacy_parser import parse_legacy_chart
-from models import Timeline
-from note_generator import generate_notes
-from release_writer import write_release_chart, write_release_keyframes
-from timeline import build_changes, build_timeline
+try:
+    from .animation_converter import convert_animations
+except ImportError:  # pragma: no cover
+    from src.animation_converter import convert_animations
+
+try:
+    from .comparator import (
+        compare_keyframes,
+        compare_notes,
+        format_comparison_report,
+        format_keyframe_comparison_report,
+        parse_release_keyframes,
+        parse_release_notes,
+    )
+except ImportError:  # pragma: no cover
+    from src.comparator import (
+        compare_keyframes,
+        compare_notes,
+        format_comparison_report,
+        format_keyframe_comparison_report,
+        parse_release_keyframes,
+        parse_release_notes,
+    )
+
+try:
+    from .debug import write_debug_file
+except ImportError:  # pragma: no cover
+    from src.debug import write_debug_file
+
+try:
+    from .legacy_parser import parse_legacy_chart
+except ImportError:  # pragma: no cover
+    from src.legacy_parser import parse_legacy_chart
+
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
+try:
+    from .note_generator import generate_notes
+except ImportError:  # pragma: no cover
+    from src.note_generator import generate_notes
+
+try:
+    from .release_writer import write_release_chart, write_release_keyframes
+except ImportError:  # pragma: no cover
+    from src.release_writer import write_release_chart, write_release_keyframes
+
+try:
+    from .timeline import build_changes, build_timeline
+except ImportError:  # pragma: no cover
+    from src.timeline import build_changes, build_timeline
+
 
 
 def convert_notes(parsed: dict):

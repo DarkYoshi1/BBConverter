@@ -5,8 +5,16 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from convert_mod import find_chart_in_mod, find_meta_in_mod, find_thumb_in_mod
-from legacy_parser import parse_legacy_chart, parse_legacy_meta
+try:
+    from .convert_mod import find_chart_in_mod, find_meta_in_mod, find_thumb_in_mod
+except ImportError:  # pragma: no cover
+    from src.convert_mod import find_chart_in_mod, find_meta_in_mod, find_thumb_in_mod
+
+try:
+    from .legacy_parser import parse_legacy_chart, parse_legacy_meta
+except ImportError:  # pragma: no cover
+    from src.legacy_parser import parse_legacy_chart, parse_legacy_meta
+
 
 APP_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "BeatBangerConverter7"
 SETTINGS_PATH = APP_CONFIG_DIR / "settings.json"

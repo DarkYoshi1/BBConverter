@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from models import Timeline, TimelineEvent
+try:
+    from .models import Timeline, TimelineEvent
+except ImportError:  # pragma: no cover
+    from src.models import Timeline, TimelineEvent
+
 
 # Legacy note_type -> Release input_type
 LEGACY_NOTE_TYPE_TO_INPUT_TYPE = {

@@ -10,7 +10,11 @@ import re
 import json
 from dataclasses import dataclass
 from typing import List, Optional
-from note_generator import Note
+try:
+    from .note_generator import Note
+except ImportError:  # pragma: no cover
+    from src.note_generator import Note
+
 
 # Tolerancia de punto flotante para considerar dos timestamps "iguales".
 # No es un offset de corrección: solo absorbe el ruido de redondeo

@@ -1,14 +1,50 @@
 import os
-from converter import convert
-from effect_converter import convert_effects
-from sound_fx_converter import convert_sound_fx
-from sound_loop_converter import convert_sound_loops
-from voice_bank_converter import convert_voice_banks
-from release_writer import (
-    write_release_effects, write_release_sound_fx,
-    write_release_sound_loops, write_release_voice_banks,
-)
-from release_writer import write_release_keyframes
+
+try:
+    from .converter import convert
+except ImportError:  # pragma: no cover
+    from src.converter import convert
+
+try:
+    from .effect_converter import convert_effects
+except ImportError:  # pragma: no cover
+    from src.effect_converter import convert_effects
+
+try:
+    from .sound_fx_converter import convert_sound_fx
+except ImportError:  # pragma: no cover
+    from src.sound_fx_converter import convert_sound_fx
+
+try:
+    from .sound_loop_converter import convert_sound_loops
+except ImportError:  # pragma: no cover
+    from src.sound_loop_converter import convert_sound_loops
+
+try:
+    from .voice_bank_converter import convert_voice_banks
+except ImportError:  # pragma: no cover
+    from src.voice_bank_converter import convert_voice_banks
+
+try:
+    from .release_writer import (
+        write_release_effects,
+        write_release_sound_fx,
+        write_release_sound_loops,
+        write_release_voice_banks,
+    )
+except ImportError:  # pragma: no cover
+    from src.release_writer import (
+        write_release_effects,
+        write_release_sound_fx,
+        write_release_sound_loops,
+        write_release_voice_banks,
+    )
+
+try:
+    from .release_writer import write_release_keyframes
+except ImportError:  # pragma: no cover
+    from src.release_writer import write_release_keyframes
+
 
 
 def main():

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from mod_library import discover_mods, load_settings, save_settings
+from src.mod_library import discover_mods, load_settings, save_settings
 
 
 def test_settings_round_trip(tmp_path):

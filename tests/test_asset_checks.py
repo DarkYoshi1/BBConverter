@@ -3,9 +3,9 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, ROOT)
 
-from legacy_parser import parse_legacy_chart
-from effect_converter import convert_effects, check_assets as check_effect_assets
-from sound_fx_converter import convert_sound_fx, check_assets as check_sfx_assets
+from src.legacy_parser import parse_legacy_chart
+from src.effect_converter import convert_effects, check_assets as check_effect_assets
+from src.sound_fx_converter import convert_sound_fx, check_assets as check_sfx_assets
 
 
 def test_asset_warnings():

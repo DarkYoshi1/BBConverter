@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from asset_resolver import resolve_asset, resolve_voice_bank_files
-from animation_converter import convert_animations
-from convert_mod import build_release_mod
-from legacy_parser import parse_legacy_chart
-from models import Timeline
-from timeline import build_changes
-from voice_bank_converter import convert_voice_banks
+from src.asset_resolver import resolve_asset, resolve_voice_bank_files
+from src.animation_converter import convert_animations
+from src.convert_mod import build_release_mod
+from src.legacy_parser import parse_legacy_chart
+from src.models import Timeline
+from src.timeline import build_changes
+from src.voice_bank_converter import convert_voice_banks
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 

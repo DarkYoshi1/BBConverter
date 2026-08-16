@@ -221,43 +221,79 @@ sudo pacman -S tk
 
 ## Project structure
 
+The project is organized into a source package, a configuration folder, and compatibility wrappers kept at the project root so existing scripts and imports continue to work.
+
 ```text
-BeatBangerConverter7/
+converter/
+├── src/
+│   ├── __init__.py
+│   ├── animation_converter.py
+│   ├── asset_resolver.py
+│   ├── background_converter.py
+│   ├── comparator.py
+│   ├── converter.py
+│   ├── convert_mod.py
+│   ├── debug.py
+│   ├── effect_converter.py
+│   ├── generate_examples.py
+│   ├── legacy_parser.py
+│   ├── mod_library.py
+│   ├── models.py
+│   ├── note_generator.py
+│   ├── release_writer.py
+│   ├── sound_fx_converter.py
+│   ├── sound_loop_converter.py
+│   ├── timeline.py
+│   ├── tkinter_app.py
+│   ├── validate_against_ground_truth.py
+│   └── voice_bank_converter.py
+│
+├── config/
+│   ├── chart.cfg
+│   ├── effect_overrides.json
+│   └── sheet_overrides.json
+│
+├── tests/
+│   ├── run_converters_test.py
+│   ├── test_animation_converter.py
+│   ├── test_asset_checks.py
+│   ├── test_full_conversion.py
+│   ├── test_mod_library.py
+│   ├── test_regressions.py
+│   └── test_tkinter_gui.py
+│
+├── tools/
+│   ├── batch_convert.py
+│   └── generate_sheet_overrides.py
+│
+├── chart.cfg
+├── effect_overrides.json
+├── sheet_overrides.json
 ├── animation_converter.py
 ├── asset_resolver.py
 ├── background_converter.py
-├── chart.cfg
 ├── comparator.py
-├── convert_mod.py
 ├── converter.py
+├── convert_mod.py
 ├── debug.py
 ├── effect_converter.py
-├── effect_overrides.json
 ├── generate_examples.py
 ├── legacy_parser.py
 ├── mod_library.py
 ├── models.py
 ├── note_generator.py
 ├── release_writer.py
-├── sheet_overrides.json
 ├── sound_fx_converter.py
 ├── sound_loop_converter.py
 ├── timeline.py
 ├── tkinter_app.py
 ├── validate_against_ground_truth.py
 ├── voice_bank_converter.py
-├── tools/
-│   ├── batch_convert.py
-│   └── generate_sheet_overrides.py
-└── tests/
-    ├── run_converters_test.py
-    ├── test_animation_converter.py
-    ├── test_asset_checks.py
-    ├── test_full_conversion.py
-    ├── test_mod_library.py
-    ├── test_regressions.py
-    └── test_tkinter_gui.py
+├── README.md
+└── .venv/
 ```
+
+The root-level Python files are compatibility shims that re-export the real implementation from the `src/` package. Prefer importing from `src.*` in new code, while the root modules remain available for existing tooling and scripts.
 
 ## Basic CLI usage
 

@@ -8,17 +8,61 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from asset_resolver import AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, resolve_asset, resolve_voice_bank_files
-from animation_converter import convert_animations
-from background_converter import convert_backgrounds
-from effect_converter import convert_effects, check_assets as check_effect_assets
-from legacy_parser import parse_legacy_chart, parse_legacy_meta
-from note_generator import generate_notes
-from release_writer import write_release_chart, write_release_keyframes
-from sound_fx_converter import convert_sound_fx, check_assets as check_sfx_assets
-from sound_loop_converter import convert_sound_loops, check_assets as check_loop_assets
-from timeline import build_changes, build_timeline
-from voice_bank_converter import convert_voice_banks, check_assets as check_vb_assets
+try:
+    from .asset_resolver import AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, resolve_asset, resolve_voice_bank_files
+except ImportError:  # pragma: no cover
+    from src.asset_resolver import AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, resolve_asset, resolve_voice_bank_files
+
+try:
+    from .animation_converter import convert_animations
+except ImportError:  # pragma: no cover
+    from src.animation_converter import convert_animations
+
+try:
+    from .background_converter import convert_backgrounds
+except ImportError:  # pragma: no cover
+    from src.background_converter import convert_backgrounds
+
+try:
+    from .effect_converter import convert_effects, check_assets as check_effect_assets
+except ImportError:  # pragma: no cover
+    from src.effect_converter import convert_effects, check_assets as check_effect_assets
+
+try:
+    from .legacy_parser import parse_legacy_chart, parse_legacy_meta
+except ImportError:  # pragma: no cover
+    from src.legacy_parser import parse_legacy_chart, parse_legacy_meta
+
+try:
+    from .note_generator import generate_notes
+except ImportError:  # pragma: no cover
+    from src.note_generator import generate_notes
+
+try:
+    from .release_writer import write_release_chart, write_release_keyframes
+except ImportError:  # pragma: no cover
+    from src.release_writer import write_release_chart, write_release_keyframes
+
+try:
+    from .sound_fx_converter import convert_sound_fx, check_assets as check_sfx_assets
+except ImportError:  # pragma: no cover
+    from src.sound_fx_converter import convert_sound_fx, check_assets as check_sfx_assets
+
+try:
+    from .sound_loop_converter import convert_sound_loops, check_assets as check_loop_assets
+except ImportError:  # pragma: no cover
+    from src.sound_loop_converter import convert_sound_loops, check_assets as check_loop_assets
+
+try:
+    from .timeline import build_changes, build_timeline
+except ImportError:  # pragma: no cover
+    from src.timeline import build_changes, build_timeline
+
+try:
+    from .voice_bank_converter import convert_voice_banks, check_assets as check_vb_assets
+except ImportError:  # pragma: no cover
+    from src.voice_bank_converter import convert_voice_banks, check_assets as check_vb_assets
+
 
 RELEASE_SUBDIRS = ("audio", "config", "images")
 
@@ -239,7 +283,7 @@ def _write_scenario_release_files(scenario_root: str, anim, mod_name: str, legac
     config/: editor_cache.cfg and thumb.png. No chart.cfg, no
     autosaved_chart.cfg, no splash.png, no meta.cfg here — those either
     don't exist in the real layout or only live under config/."""
-    from animation_converter import resolve_sheet_data, SHEET_DATA_OVERRIDES
+    from .animation_converter import resolve_sheet_data, SHEET_DATA_OVERRIDES
 
     # editor_cache.cfg: one sprite_sheet entry per unique animation and effect
     # asset actually used. Release indexes effect sprites here too, even though
@@ -467,7 +511,7 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     check_loop_assets(loops, assets_dir)
     check_vb_assets(voice_banks, assets_dir)
     anim_asset_result = []
-    from animation_converter import check_assets as check_animation_assets
+    from .animation_converter import check_assets as check_animation_assets
     check_animation_assets(anim, assets_dir)
 
     copied: List[str] = []
@@ -555,7 +599,7 @@ def build_arg_parser():
 if __name__ == "__main__":
     args = build_arg_parser().parse_args()
     if args.gui:
-        from tkinter_app import launch_gui
+        from .tkinter_app import launch_gui
         launch_gui()
     else:
         if not args.input_mod:

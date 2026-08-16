@@ -4,7 +4,11 @@ import json
 import os
 from typing import Any, Iterable, List, Optional
 
-from note_generator import Note
+try:
+    from .note_generator import Note
+except ImportError:  # pragma: no cover
+    from src.note_generator import Note
+
 
 
 def _write_cfg(path: str, data: dict) -> None:

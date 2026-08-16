@@ -5,10 +5,10 @@ import os
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, ROOT)
 
-from legacy_parser import parse_legacy_chart
-from effect_converter import convert_effects
-from sound_fx_converter import convert_sound_fx
-from sound_loop_converter import convert_sound_loops
+from src.legacy_parser import parse_legacy_chart
+from src.effect_converter import convert_effects
+from src.sound_fx_converter import convert_sound_fx
+from src.sound_loop_converter import convert_sound_loops
 
 
 def main():

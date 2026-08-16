@@ -3,12 +3,17 @@ from __future__ import annotations
 import fnmatch
 import json
 import os
+import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
-from models import Timeline
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
 
 
 @dataclass
@@ -29,7 +34,10 @@ class EffectConversionResult:
     unresolved_last_transition: Optional[dict] = None
 
 
-_OVERRIDES_PATH = os.path.join(os.path.dirname(__file__), "effect_overrides.json")
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "config", "effect_overrides.json")
+if not os.path.isfile(_OVERRIDES_PATH):
+    _OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "effect_overrides.json")
 
 
 def _load_overrides() -> Dict[str, dict]:
@@ -53,7 +61,10 @@ def _save_sheet_override(name: str, sheet_data: dict) -> None:
         current[name] = entry
         with open(_OVERRIDES_PATH, "w", encoding="utf-8") as f:
             json.dump(current, f, indent=2, ensure_ascii=False)
-        OVERRIDES[name] = entry
+        active = _active_overrides()
+        active[name] = entry
+        if active is not OVERRIDES:
+            OVERRIDES[name] = entry
     except Exception:
         # Best-effort: if we can't persist it, the conversion still
         # succeeds with the answer already given for this run.
@@ -63,14 +74,25 @@ def _save_sheet_override(name: str, sheet_data: dict) -> None:
 OVERRIDES = _load_overrides()
 
 
+def _active_overrides() -> Dict[str, dict]:
+    """Use the currently active override table, including the legacy module alias."""
+    module = sys.modules.get("effect_converter")
+    if module is not None and module is not sys.modules.get(__name__):
+        legacy_overrides = getattr(module, "OVERRIDES", None)
+        if isinstance(legacy_overrides, dict):
+            return legacy_overrides
+    return OVERRIDES
+
+
 def _get_effect_override(name: str) -> dict:
     """Return the most specific exact/pattern override for an effect asset."""
-    direct = OVERRIDES.get(name)
+    override_store = _active_overrides()
+    direct = override_store.get(name)
     if isinstance(direct, dict):
         return direct
     lowered = str(name).lower()
     candidates = []
-    for pattern, value in OVERRIDES.items():
+    for pattern, value in override_store.items():
         if not isinstance(value, dict) or not any(ch in pattern for ch in "*?["):
             continue
         if fnmatch.fnmatch(lowered, pattern.lower()):
@@ -192,7 +214,7 @@ def _effect_info(name: str, frame: int, assets_dir: Optional[str], interactive_s
     elif interactive_sheets and str(name).lower().endswith(IMAGE_EXTENSIONS) and assets_dir:
         asset_path = os.path.join(assets_dir, name)
         if not os.path.isfile(asset_path):
-            from asset_resolver import resolve_asset
+            from .asset_resolver import resolve_asset
             asset_path = resolve_asset(name, assets_dir, asset_kind="effect") or ""
         if asset_path and os.path.isfile(asset_path):
             sheet_data = _ask_sheet_data(asset_path, sheet_cache)
@@ -263,7 +285,7 @@ def check_assets(result: EffectConversionResult, assets_dir: Optional[str]) -> N
     if not assets_dir:
         result.warnings.append("No --assets-dir provided: skipping effect asset checks.")
         return
-    from asset_resolver import resolve_asset
+    from .asset_resolver import resolve_asset
     if not os.path.isdir(assets_dir):
         result.errors.append(f"--assets-dir '{assets_dir}' does not exist or is not a directory.")
         return

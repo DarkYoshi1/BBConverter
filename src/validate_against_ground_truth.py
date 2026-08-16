@@ -1,10 +1,26 @@
 import argparse
 import os
-from comparator import (
-    parse_release_keyframes, compare_keyframes,
-    parse_release_effects, compare_effects,
-    parse_release_sound_fx, parse_release_sound_loops, parse_release_voice_banks,
-)
+
+try:
+    from .comparator import (
+        parse_release_keyframes,
+        compare_keyframes,
+        parse_release_effects,
+        compare_effects,
+        parse_release_sound_fx,
+        parse_release_sound_loops,
+        parse_release_voice_banks,
+    )
+except ImportError:  # pragma: no cover
+    from src.comparator import (
+        parse_release_keyframes,
+        compare_keyframes,
+        parse_release_effects,
+        compare_effects,
+        parse_release_sound_fx,
+        parse_release_sound_loops,
+        parse_release_voice_banks,
+    )
 
 
 def run_keyframes_validation(gt_path, generated_keyframes):
@@ -25,8 +41,8 @@ def main():
     args = p.parse_args()
 
     # import late to avoid circular imports when used differently
-    from animation_converter import convert_animations
-    from legacy_parser import parse_legacy_chart
+    from .animation_converter import convert_animations
+    from .legacy_parser import parse_legacy_chart
 
     # For convenience, if generated_keyframes is a path to a parser result, we parse it
     # But here we only support comparing a generated list by re-running conversion.

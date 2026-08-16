@@ -4,7 +4,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-from models import Timeline
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
 
 
 @dataclass
@@ -85,7 +89,7 @@ def check_assets(result: SoundLoopResult, assets_dir: Optional[str]) -> None:
     if not assets_dir:
         result.warnings.append("No --assets-dir provided: skipping sound loop asset checks.")
         return
-    from asset_resolver import resolve_asset
+    from .asset_resolver import resolve_asset
     if not os.path.isdir(assets_dir):
         result.errors.append(f"--assets-dir '{assets_dir}' does not exist or is not a directory.")
         return

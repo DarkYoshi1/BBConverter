@@ -3,8 +3,8 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, ROOT)
 
-from legacy_parser import parse_legacy_chart
-from animation_converter import convert_animations
+from src.legacy_parser import parse_legacy_chart
+from src.animation_converter import convert_animations
 
 
 def test_include_last_transition():

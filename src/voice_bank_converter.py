@@ -4,8 +4,16 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from asset_resolver import AUDIO_EXTENSIONS, resolve_asset, resolve_voice_bank_files
-from models import Timeline
+try:
+    from .asset_resolver import AUDIO_EXTENSIONS, resolve_asset, resolve_voice_bank_files
+except ImportError:  # pragma: no cover
+    from src.asset_resolver import AUDIO_EXTENSIONS, resolve_asset, resolve_voice_bank_files
+
+try:
+    from .models import Timeline
+except ImportError:  # pragma: no cover
+    from src.models import Timeline
+
 
 
 @dataclass
