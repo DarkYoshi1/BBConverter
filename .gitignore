@@ -6,6 +6,8 @@ __pycache__/
 venv/
 build/
 dist/
+effect_overrides.json
+sheet_overrides.json
 *.spec
 *.log
 *_conversion_debug.txt
