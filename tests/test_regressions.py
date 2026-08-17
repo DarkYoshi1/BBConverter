@@ -147,3 +147,55 @@ last_transition = {}
     summary, issues = build_release_mod(str(mod), str(out), interactive_sheets=False)
     assert summary["asset_conflicts_count"] == 1
     assert any("Asset basename collision" in e for e in issues["errors"])
+
+
+def test_release_metadata_places_creator_in_act_cfg_and_post_song_delay_in_settings(tmp_path):
+    mod = tmp_path / "Legacy"
+    mod.mkdir()
+    (mod / "meta.cfg").write_text('''
+[meta]
+mod_title = "Title"
+mod_creator = "Mod Creator"
+mod_artist = "Ignored Artist"
+song_artist = "Song Creator"
+song_title = "Song Title"
+''', encoding="utf-8")
+    (mod / "chart.cfg").write_text('''
+bpm = 120
+note_offset = 0
+half_spawn = [0]
+quarter_spawn = []
+eighth_spawn = []
+no_spawn = [8]
+last_beat = [8]
+name = "Legacy Test"
+song_path = "song.ogg"
+post_song_delay = 5
+initial_data = {"animation": "Idle.png", "note_type": 1}
+transitions = {}
+last_transition = {}
+''', encoding="utf-8")
+    (mod / "song.ogg").write_bytes(b"song")
+    (mod / "Idle.png").write_bytes(b"png")
+
+    out = tmp_path / "Release"
+    build_release_mod(str(mod), str(out), interactive_sheets=False)
+
+    def read_cfg(path):
+        text = path.read_text(encoding="utf-8")
+        payload = text.split("data=", 1)[1].strip()
+        return json.loads(payload)
+
+    scenario = out / "Title"
+    mod_cfg = read_cfg(scenario / "config" / "mod.cfg")
+    assert "creator" not in mod_cfg
+    assert mod_cfg["song_creator"] == "Song Creator"
+    assert mod_cfg["song_title"] == "Song Title"
+
+    act_cfg = read_cfg(out / "act.cfg")
+    assert act_cfg["author"] == "Mod Creator"
+    assert "BBConverter" in act_cfg["act_description"]
+    assert "https://github.com/DarkYoshi1/BBConverter" in act_cfg["act_description"]
+
+    settings_cfg = read_cfg(scenario / "config" / "settings.cfg")
+    assert settings_cfg["post_song_delay"] == 5

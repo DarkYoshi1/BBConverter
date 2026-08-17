@@ -65,6 +65,10 @@ except ImportError:  # pragma: no cover
 
 
 RELEASE_SUBDIRS = ("audio", "config", "images")
+CONVERTER_CREDITS = (
+    "Converted with BBConverter\n"
+    "https://github.com/DarkYoshi1/BBConverter"
+)
 
 
 def _sanitize_folder_name(name: str) -> str:
@@ -319,15 +323,17 @@ def _write_scenario_release_files(scenario_root: str, anim, mod_name: str, legac
     _copy_thumb_or_placeholder(legacy_thumb, os.path.join(scenario_root, "thumb.png"))
 
 
-def _write_mod_root_files(output_mod: str, mod_name: str, legacy_thumb: Optional[str] = None):
+def _write_mod_root_files(output_mod: str, mod_name: str, legacy_thumb: Optional[str] = None,
+                         author: str = ""):
     """Writes what lives at the TOP of a real mod folder (sibling to the
     scenario folder(s)): act.cfg and thumb.png. Legacy has no equivalent of
     act_description/act_id, so those are left empty rather than invented."""
     act_cfg = {
-        "act_description": "",
+        "act_description": CONVERTER_CREDITS,
         "act_id": "",
         "act_index": 0,
         "act_name": mod_name,
+        "author": author,
     }
     _write_text(os.path.join(output_mod, "act.cfg"),
                 "[main]\n\ndata=" + json.dumps(act_cfg, indent=2, ensure_ascii=False) + "\n")
@@ -343,16 +349,15 @@ def _write_config_meta(config_root: str, parsed: dict, legacy_meta: dict, mod_na
     warnings: List[str] = []
     scenario_root = os.path.dirname(config_root)
 
-    # --- mod.cfg: creator/description/preview_timestamp/song_author/song_title ---
-    # Confirmed source: Legacy's meta.cfg (mod_creator, song_artist, song_title).
+    # --- mod.cfg: description/preview_timestamp/song_creator/song_title ---
+    # Confirmed source: Legacy's meta.cfg (song_artist, song_title).
     if not legacy_meta:
-        warnings.append("No meta.cfg found next to chart.cfg: mod.cfg's creator/song_author/"
+        warnings.append("No meta.cfg found next to chart.cfg: mod.cfg's song_creator/"
                          "song_title were left blank.")
     # Preserve original mod fields and include level_id for save stability.
     mod_cfg = {
-        "creator": legacy_meta.get("mod_creator", ""),
         "description": "",  # no Legacy source for a description; left blank, not invented
-        "song_author": legacy_meta.get("song_artist", ""),
+        "song_creator": legacy_meta.get("song_artist", ""),
         "song_title": legacy_meta.get("song_title") or parsed.get("name") or "",
         # level_id populated below and injected into meta_cfg/settings as well
         # to ensure Release can reliably identify the level for saves.
@@ -416,9 +421,10 @@ def _write_config_meta(config_root: str, parsed: dict, legacy_meta: dict, mod_na
     settings = {
         "song_offset": 0.0,
         "level_id": meta_cfg.get("level_id", ""),
+        "post_song_delay": parsed.get("post_song_delay", 0),
     }
     warnings.append("settings.cfg: song_offset set to 0 because Legacy note_offset is already baked into chart/keyframe timestamps; this prevents double-offset playback.")
-    for k in ("music_volume", "sfx_volume", "voice_volume", "loop_speed", "screen_flash", "post_song_delay", "bar_position"):
+    for k in ("music_volume", "sfx_volume", "voice_volume", "loop_speed", "screen_flash", "bar_position"):
         if parsed.get(k) is not None:
             warnings.append(f"Legacy chart.cfg has {k}={parsed[k]!r}, but it does not appear in "
                              f"settings.cfg's confirmed schema — not written anywhere.")
@@ -537,8 +543,8 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     )
 
     meta_warnings = _write_config_meta(config_root, parsed, legacy_meta, mod_name)
+    _write_mod_root_files(output_mod, mod_name, legacy_thumb, author=legacy_meta.get("mod_creator", ""))
     _write_scenario_release_files(scenario_root, anim, mod_name, legacy_thumb, effects=effects.keyframes)
-    _write_mod_root_files(output_mod, mod_name, legacy_thumb)
 
     diagnostics = {"assets": collect_referenced_assets(parsed), "missing_assets": missing_assets, "asset_conflicts": asset_conflicts}
     debug_path = output_mod.rstrip(os.sep) + "_conversion_debug.txt"

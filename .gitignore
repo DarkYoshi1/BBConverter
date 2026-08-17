@@ -6,6 +6,7 @@ __pycache__/
 venv/
 build/
 dist/
+config/
 effect_overrides.json
 sheet_overrides.json
 *.spec
