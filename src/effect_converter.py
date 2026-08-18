@@ -35,18 +35,59 @@ class EffectConversionResult:
 
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "config", "effect_overrides.json")
-if not os.path.isfile(_OVERRIDES_PATH):
-    _OVERRIDES_PATH = os.path.join(_PROJECT_ROOT, "effect_overrides.json")
+
+# Path used when persisting a user-confirmed sprite count (see
+# `_save_sheet_override`). Prefer a `config/` folder next to the running
+# binary/script (cwd) so saved answers live alongside the executable rather
+# than inside a read-only bundled onefile temp dir.
+_OVERRIDES_PATH = os.path.join(os.path.abspath(os.getcwd()), "config", "effect_overrides.json")
+
+
+def _candidate_override_paths() -> list[str]:
+    """Return candidate filesystem paths where effect_overrides.json may live.
+
+    Order is important: prefer a `config/` next to the current working
+    directory (where the user runs the binary), then module-local
+    locations, then repository-root fallbacks.
+    """
+    candidates = []
+    cwd = os.path.abspath(os.getcwd())
+    candidates.append(os.path.join(cwd, "config", "effect_overrides.json"))
+    candidates.append(os.path.join(cwd, "effect_overrides.json"))
+    candidates.append(os.path.join(_PROJECT_ROOT, "config", "effect_overrides.json"))
+    candidates.append(os.path.join(_PROJECT_ROOT, "effect_overrides.json"))
+    return candidates
 
 
 def _load_overrides() -> Dict[str, dict]:
+    # Try filesystem locations first (user-provided config or one created
+    # by `ensure_config_dir`). If none exist, fall back to packaged defaults
+    # from `src.defaults` so the converter still has sensible values when
+    # run from a bundled onefile binary before any external config is present.
+    for path in _candidate_override_paths():
+        try:
+            if os.path.isfile(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return data if isinstance(data, dict) else {}
+        except Exception:
+            continue
+
+    # Fallback: load packaged defaults from the src.defaults package.
     try:
-        with open(_OVERRIDES_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except FileNotFoundError:
-        return {}
+        try:
+            from importlib import resources
+
+            text = resources.read_text("src.defaults", "effect_overrides.json")
+            data = json.loads(text)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            from pkgutil import get_data
+
+            raw = get_data("src.defaults", "effect_overrides.json")
+            if raw:
+                data = json.loads(raw.decode("utf-8"))
+                return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
@@ -59,6 +100,7 @@ def _save_sheet_override(name: str, sheet_data: dict) -> None:
         entry = dict(current.get(name) or {})
         entry["sheet_data"] = sheet_data
         current[name] = entry
+        os.makedirs(os.path.dirname(_OVERRIDES_PATH), exist_ok=True)
         with open(_OVERRIDES_PATH, "w", encoding="utf-8") as f:
             json.dump(current, f, indent=2, ensure_ascii=False)
         active = _active_overrides()
@@ -74,6 +116,16 @@ def _save_sheet_override(name: str, sheet_data: dict) -> None:
 OVERRIDES = _load_overrides()
 
 
+def reload_overrides() -> None:
+    """Reload the active overrides from disk or packaged defaults.
+
+    Call this after creating a `config/` directory at runtime so the
+    converter picks up any user-provided overrides written after import.
+    """
+    global OVERRIDES
+    OVERRIDES = _load_overrides()
+
+
 def _active_overrides() -> Dict[str, dict]:
     """Use the currently active override table, including the legacy module alias."""
     module = sys.modules.get("effect_converter")
@@ -81,13 +133,19 @@ def _active_overrides() -> Dict[str, dict]:
         legacy_overrides = getattr(module, "OVERRIDES", None)
         if isinstance(legacy_overrides, dict):
             return legacy_overrides
-    return OVERRIDES
+    # Ensure we always return a dict to avoid callers doing `.get()` on None
+    if isinstance(OVERRIDES, dict):
+        return OVERRIDES
+    return {}
 
 
 def _get_effect_override(name: str) -> dict:
     """Return the most specific exact/pattern override for an effect asset."""
-    override_store = _active_overrides()
-    direct = override_store.get(name)
+    override_store = _active_overrides() or {}
+    try:
+        direct = override_store.get(name)
+    except Exception:
+        return {}
     if isinstance(direct, dict):
         return direct
     lowered = str(name).lower()
