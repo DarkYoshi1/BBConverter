@@ -34,7 +34,7 @@ converter/
 │   ├── sound_fx_converter.py
 │   ├── sound_loop_converter.py
 │   ├── timeline.py
-│   ├── tkinter_app.py
+│   ├── pyside_app.py
 │   ├── validate_against_ground_truth.py
 │   └── voice_bank_converter.py
 ├── tests/
@@ -45,7 +45,7 @@ converter/
 │   ├── test_full_conversion.py
 │   ├── test_mod_library.py
 │   ├── test_regressions.py
-│   └── test_tkinter_gui.py
+│   └── test_pyside_gui.py
 ├── tools/
 │   ├── batch_convert.py
 │   └── generate_sheet_overrides.py
@@ -55,25 +55,19 @@ converter/
 └── __pycache__/
 ```
 
-The main logic lives under `src/`. The root-level `main.py` is the current CLI entry point and delegates to `src.convert_mod` and `src.tkinter_app`.
+The main logic lives under `src/`. The root-level `main.py` is the current CLI entry point and delegates to `src.convert_mod` and `src.pyside_app`.
 
 ## Requirements
 
 - Python 3.10+
-- Tkinter for the GUI
+- PySide6 for the GUI
 - Pillow for sprite-sheet inspection and thumbnails
 - pytest for running tests
 
 Install dependencies:
 
 ```bash
-python -m pip install Pillow pytest
-```
-
-On Arch Linux, Tkinter is usually provided by the `tk` package:
-
-```bash
-sudo pacman -S tk
+python -m pip install PySide6 Pillow pytest
 ```
 
 ## Usage
@@ -145,14 +139,27 @@ python main.py --gui
 
 ## GUI / mod library
 
-The Tkinter interface operates as a small mod library and conversion dashboard:
+The PySide6 interface operates as a small mod library and conversion dashboard:
 
 - choose a folder containing multiple Legacy mods
 - persist the library path in user config
 - discover mods automatically
 - view conversion cards with thumbnails and metadata
 - convert individual mods from the library view
-- refresh the list and keep the UI responsive while conversion runs in the background
+- refresh the list and keep the UI responsive while conversion runs in the background (each conversion runs on a `QThread`, off the UI thread)
+- set optional assets directory / scenario name overrides directly from the GUI
+- toggle "skip copying assets", "skip interactive sheet prompts", and "include final last_transition" from the options panel
+
+### Built-in debugger
+
+The bottom panel has two tabs:
+
+- **Activity log** — a running, timestamped log of everything the GUI does, same as before.
+- **Debugger** — a dedicated diagnostics view with:
+  - a **history list** of every conversion run this session (colored ✔/⚠/✖ by outcome), so you can revisit any past run without re-converting
+  - a **Summary** tab showing the structured summary dict (notes/animations/effects/warnings/errors counts, output paths, etc.) in a table, with error/warning counts highlighted
+  - a **Warnings** tab and an **Errors** tab listing each issue individually
+  - a **Raw debug log** tab showing the full `_conversion_debug.txt` diagnostic report (interval changes, collisions, per-note conversion log) in a monospaced, searchable text view with find next/previous
 
 The library settings are stored under:
 

@@ -12,10 +12,10 @@ if [ ! -x "$PYTHON_BIN" ]; then
 fi
 
 "$PYTHON_BIN" -m pip install --upgrade pip
-"$PYTHON_BIN" -m pip install --upgrade "Nuitka[app]" Pillow
+"$PYTHON_BIN" -m pip install --upgrade "Nuitka[app]" Pillow PySide6
 
 mkdir -p build
-"$PYTHON_BIN" -m nuitka --onefile --follow-imports --include-package=PIL --include-data-dir=src/defaults=src/defaults --output-dir=build --output-file=BBConverter main.py
+"$PYTHON_BIN" -m nuitka --onefile --follow-imports --enable-plugin=pyside6 --include-package=PIL --include-data-dir=src/defaults=src/defaults --output-dir=build --output-file=BBConverter main.py
 
 # Ship an editable config/ folder right next to the compiled binary. The
 # onefile bundle only unpacks src/defaults into a throwaway temp dir at

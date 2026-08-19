@@ -25,7 +25,7 @@ LEGACY_ALIASES = {
     "sound_fx_converter": "src.sound_fx_converter",
     "sound_loop_converter": "src.sound_loop_converter",
     "timeline": "src.timeline",
-    "tkinter_app": "src.tkinter_app",
+    "pyside_app": "src.pyside_app",
     "validate_against_ground_truth": "src.validate_against_ground_truth",
     "voice_bank_converter": "src.voice_bank_converter",
 }

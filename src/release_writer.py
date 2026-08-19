@@ -20,18 +20,24 @@ def _write_cfg(path: str, data: dict) -> None:
         f.write("\n")
 
 
+def _build_note_entry(n: Note) -> dict:
+    entry = {
+        "input_type": n.input_type,
+        "note_modifier": n.note_modifier,
+        "timestamp": round(n.timestamp, 8),
+    }
+    if bool(getattr(n, "trigger_voice", False)):
+        entry["trigger_voice"] = True
+    return entry
+
+
 def write_release_chart(path: str, notes: List[Note], name: str = "Normal", icon: str = "icon1.png", rating: int = 0) -> None:
     data = {
         "charts": [{
             "icon": icon,
             "name": name,
             "notes": [
-                {
-                    "input_type": n.input_type,
-                    "note_modifier": n.note_modifier,
-                    "timestamp": round(n.timestamp, 8),
-                    "trigger_voice": bool(getattr(n, "trigger_voice", False)),
-                }
+                _build_note_entry(n)
                 for n in notes
             ],
             "rating": rating,

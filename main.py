@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from src.convert_mod import build_release_mod
-from src.tkinter_app import launch_gui
+from src.pyside_app import launch_gui
 
 
 def ensure_config_dir():
@@ -86,7 +86,7 @@ def ensure_config_dir():
 def main():
     ensure_config_dir()
     parser = argparse.ArgumentParser(description="Beat Banger Legacy -> Release converter")
-    parser.add_argument("--gui", action="store_true", help="Open the Tkinter library GUI")
+    parser.add_argument("--gui", action="store_true", help="Open the PySide6 library GUI")
     parser.add_argument("input_mod", nargs="?", default="", help="Path to the Legacy mod folder")
     parser.add_argument("output_mod", nargs="?", default=None, help="Destination Release mod folder")
     parser.add_argument("--assets-dir", default=None, help="Assets directory. Defaults to input_mod.")

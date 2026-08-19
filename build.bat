@@ -13,10 +13,10 @@ if not exist "%VENV_DIR%\Scripts\python.exe" (
 
 call "%VENV_DIR%\Scripts\activate.bat"
 python -m pip install --upgrade pip
-python -m pip install --upgrade "Nuitka[app]" Pillow
+python -m pip install --upgrade "Nuitka[app]" Pillow PySide6
 
 if not exist "build" mkdir build
-python -m nuitka --onefile --follow-imports --include-package=PIL --include-data-dir=src/defaults=src/defaults --output-dir=build --output-file=BBConverter main.py
+python -m nuitka --onefile --follow-imports --enable-plugin=pyside6 --include-package=PIL --include-data-dir=src/defaults=src/defaults --output-dir=build --output-file=BBConverter main.py
 
 if not exist "build\config" mkdir "build\config"
 copy /Y "src\defaults\effect_overrides.json" "build\config\effect_overrides.json" >nul

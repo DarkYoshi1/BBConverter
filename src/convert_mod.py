@@ -386,11 +386,9 @@ def _write_config_meta(config_root: str, parsed: dict, legacy_meta: dict, mod_na
         "level_name": level_name,
     }
     warnings.append("meta.cfg: 'character' has no Legacy equivalent and is left blank. 'color' is omitted because Legacy provides no verified Release value.")
-    # Write a top-level scenario meta.cfg (some Release loaders expect a
-    # meta.cfg alongside the scenario folder) first, then mirror it to
-    # config/meta.cfg. Doing the top-level write first avoids any subtle
-    # ordering issues on some filesystems.
-    _write_text(os.path.join(scenario_root, "meta.cfg"), "[main]\n\ndata=" + json.dumps(meta_cfg, indent=2, ensure_ascii=False) + "\n")
+    # Only config/meta.cfg is written. A top-level meta.cfg alongside the
+    # scenario folder (and one in the main assets directory) are NOT
+    # generated, per Release's actual expected layout.
     _write_text(os.path.join(config_root, "meta.cfg"), "[main]\n\ndata=" + json.dumps(meta_cfg, indent=2, ensure_ascii=False) + "\n")
 
     # --- asset.cfg: cutscene_song_path/final_audio/final_video/horny_mode_sound/song_path ---
@@ -493,16 +491,6 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     for subdir in RELEASE_SUBDIRS:
         os.makedirs(os.path.join(scenario_root, subdir), exist_ok=True)
 
-    root_meta = {
-        "mod_title": legacy_meta.get("mod_title") or mod_name,
-        "mod_creator": legacy_meta.get("mod_creator", ""),
-        "mod_artist": legacy_meta.get("mod_artist", ""),
-        "song_artist": legacy_meta.get("song_artist", ""),
-        "song_title": legacy_meta.get("song_title", parsed.get("name") or ""),
-        "length": legacy_meta.get("length", ""),
-    }
-    _write_text(os.path.join(output_mod, "meta.cfg"), "[main]\n\ndata=" + json.dumps(root_meta, indent=2, ensure_ascii=False) + "\n")
-
     changes, collisions = build_changes(parsed)
     notes = generate_notes(changes, timeline, parsed)
     anim = convert_animations(parsed, timeline=timeline, assets_dir=assets_dir, include_last_transition=include_last_transition)
@@ -591,7 +579,7 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
 
 def build_arg_parser():
     p = argparse.ArgumentParser(description="Convert a Beat Banger Legacy mod folder to the Release mod layout")
-    p.add_argument("--gui", action="store_true", help="Open the Tkinter graphical interface instead of the command-line flow")
+    p.add_argument("--gui", action="store_true", help="Open the PySide6 graphical interface instead of the command-line flow")
     p.add_argument("input_mod", nargs="?", default="", help="Path to the Legacy mod folder (containing chart.cfg)")
     p.add_argument("output_mod", nargs="?", default=None, help="Where to write the Release mod. Defaults to '<input_mod>_Release'.")
     p.add_argument("--assets-dir", default=None, help="Directory containing Legacy assets. Defaults to input_mod.")
@@ -605,7 +593,7 @@ def build_arg_parser():
 if __name__ == "__main__":
     args = build_arg_parser().parse_args()
     if args.gui:
-        from .tkinter_app import launch_gui
+        from .pyside_app import launch_gui
         launch_gui()
     else:
         if not args.input_mod:
