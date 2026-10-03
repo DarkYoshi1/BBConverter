@@ -82,7 +82,7 @@ def launch_gui():
         failed = Signal(str, str)
 
         def __init__(self, input_mod, output_mod, assets_dir, no_copy_assets,
-                     no_interactive, include_last_transition, scenario_name, parent=None):
+                     no_interactive, include_last_transition, scenario_name, background_transform=None, parent=None):
             super().__init__(parent)
             self.input_mod = input_mod
             self.output_mod = output_mod
@@ -91,6 +91,7 @@ def launch_gui():
             self.no_interactive = no_interactive
             self.include_last_transition = include_last_transition
             self.scenario_name = scenario_name
+            self.background_transform = background_transform
 
         def run(self):
             try:
@@ -103,6 +104,7 @@ def launch_gui():
                     include_last_transition=self.include_last_transition,
                     copy_assets_flag=not self.no_copy_assets,
                     scenario_name=self.scenario_name,
+                    background_transform=self.background_transform,
                     interactive_sheets=not self.no_interactive,
                 )
                 debug_text = ""
@@ -426,6 +428,12 @@ def launch_gui():
             self.include_last_transition_cb = QCheckBox("Include final last_transition")
             self.include_last_transition_cb.setChecked(True)
             checks_row.addWidget(self.include_last_transition_cb)
+            # Background transform options
+            self.bg_transform_cb = QCheckBox("Adapt Legacy backgrounds to 1920×1080")
+            checks_row.addWidget(self.bg_transform_cb)
+            self.bg_allow_upscale_cb = QCheckBox("Allow upscaling of small images")
+            self.bg_allow_upscale_cb.setChecked(True)
+            checks_row.addWidget(self.bg_allow_upscale_cb)
             checks_row.addStretch(1)
             options_layout.addLayout(checks_row)
 
@@ -440,6 +448,21 @@ def launch_gui():
 
             self.scenario_name_edit = QLineEdit()
             form_row.addRow("Scenario name (optional)", self.scenario_name_edit)
+            # extra background options row
+            self.bg_mode_combo = None
+            self.bg_pos_combo = None
+            try:
+                from PySide6.QtWidgets import QComboBox
+                self.bg_mode_combo = QComboBox()
+                self.bg_mode_combo.addItems(["cover", "cover_height", "contain"])
+                self.bg_mode_combo.setCurrentText("cover_height")
+                self.bg_pos_combo = QComboBox()
+                self.bg_pos_combo.addItems(["top", "center", "bottom"])
+                self.bg_pos_combo.setCurrentText("center")
+                form_row.addRow("Background mode", self.bg_mode_combo)
+                form_row.addRow("Crop position", self.bg_pos_combo)
+            except Exception:
+                pass
             options_layout.addLayout(form_row)
 
             outer.addWidget(options_box)
@@ -482,6 +505,47 @@ def launch_gui():
                 self.refresh_mods()
             else:
                 self.render_mod_grid([])
+            # initialize background options from settings
+            bg_cfg = self.settings.get("background_transform") or {}
+            try:
+                self.bg_transform_cb.setChecked(bool(bg_cfg.get("enabled", False)))
+            except Exception:
+                pass
+            if self.bg_mode_combo:
+                try:
+                    self.bg_mode_combo.setCurrentText(str(bg_cfg.get("fit_mode") or "cover"))
+                except Exception:
+                    pass
+            if self.bg_pos_combo:
+                try:
+                    self.bg_pos_combo.setCurrentText(str(bg_cfg.get("crop_position") or "center"))
+                except Exception:
+                    pass
+            try:
+                self.bg_allow_upscale_cb.setChecked(bool(bg_cfg.get("allow_upscale", True)))
+            except Exception:
+                pass
+            # save settings when changed
+            def _save_bg_settings():
+                cfg = {
+                    "enabled": bool(self.bg_transform_cb.isChecked()),
+                    "target_size": [1920, 1080],
+                    "fit_mode": (self.bg_mode_combo.currentText() if self.bg_mode_combo else "cover"),
+                    "crop_position": (self.bg_pos_combo.currentText() if self.bg_pos_combo else "center"),
+                    "allow_upscale": bool(self.bg_allow_upscale_cb.isChecked()),
+                }
+                self.settings["background_transform"] = cfg
+                try:
+                    save_settings(self.settings)
+                except OSError:
+                    pass
+
+            self.bg_transform_cb.stateChanged.connect(lambda _: _save_bg_settings())
+            if self.bg_mode_combo:
+                self.bg_mode_combo.currentIndexChanged.connect(lambda _: _save_bg_settings())
+            if self.bg_pos_combo:
+                self.bg_pos_combo.currentIndexChanged.connect(lambda _: _save_bg_settings())
+            self.bg_allow_upscale_cb.stateChanged.connect(lambda _: _save_bg_settings())
 
         # -- library handling ---------------------------------------------
         def _choose_assets_dir(self):
@@ -562,6 +626,7 @@ def launch_gui():
                 self.no_interactive_cb.isChecked(),
                 self.include_last_transition_cb.isChecked(),
                 self.scenario_name_edit.text().strip() or None,
+                background_transform=self.settings.get("background_transform"),
             )
             worker.finished_ok.connect(
                 lambda summary, issues, debug_text: self._on_conversion_finished(

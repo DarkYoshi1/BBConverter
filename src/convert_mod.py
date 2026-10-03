@@ -59,6 +59,16 @@ except ImportError:  # pragma: no cover
     from src.timeline import build_changes, build_timeline
 
 try:
+    from .models import BackgroundTransform
+except ImportError:  # pragma: no cover
+    from src.models import BackgroundTransform
+
+try:
+    from .background_scaler import transform_background
+except ImportError:  # pragma: no cover
+    from src.background_scaler import transform_background
+
+try:
     from .voice_bank_converter import convert_voice_banks, check_assets as check_vb_assets
 except ImportError:  # pragma: no cover
     from src.voice_bank_converter import convert_voice_banks, check_assets as check_vb_assets
@@ -212,11 +222,14 @@ def _copy_resolved_asset(src: str, name: str, scenario_root: str, copied: list[s
     copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
 
 
-def copy_assets(parsed: dict, src_root: str, scenario_root: str) -> Tuple[List[str], List[str], List[str]]:
+def copy_assets(parsed: dict, src_root: str, scenario_root: str,
+                background_transform: BackgroundTransform | dict | None = None,
+                background_refs: set[str] | None = None) -> Tuple[List[str], List[str], List[str], List[str]]:
     copied: list[str] = []
     missing: list[str] = []
     conflicts: list[str] = []
     destinations: dict[str, str] = {}
+    transform_logs: list[str] = []
 
     direct_refs = collect_referenced_assets(parsed)
     states = list(_iter_state_dicts(parsed))
@@ -226,6 +239,46 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str) -> Tuple[List[s
         # are not actual files.
         src = resolve_asset(ref, src_root)
         if src:
+            # If this reference is a background and a transform is requested,
+            # attempt to apply it before writing to the destination.
+            # Background references can differ in separators/case between the
+            # parser and the filesystem. Match by normalized path AND basename.
+            def _norm_ref(value):
+                return str(value).replace("\\", "/").strip().casefold()
+
+            ref_norm = _norm_ref(ref)
+            ref_base = os.path.basename(ref_norm)
+            normalized_bg = {_norm_ref(x) for x in (background_refs or set())}
+            background_bases = {os.path.basename(x) for x in normalized_bg}
+            is_background = ref_norm in normalized_bg or ref_base in background_bases
+
+            if is_background and background_transform:
+                from PIL import Image
+                img = Image.open(src)
+                settings = background_transform
+                if isinstance(background_transform, dict):
+                    settings = BackgroundTransform(**background_transform)
+                if getattr(settings, "enabled", False):
+                    transformed = transform_background(img, settings)
+                    destination = _asset_destination(ref, scenario_root)
+                    os.makedirs(os.path.dirname(destination), exist_ok=True)
+                    # Save a fully materialized image so the output dimensions
+                    # are exactly the dimensions produced by the scaler.
+                    if transformed.mode == "P":
+                        transformed = transformed.convert("RGBA")
+                    transformed.save(destination)
+                    key = os.path.normcase(os.path.basename(destination))
+                    destinations[key] = os.path.abspath(src)
+                    copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
+                    transform_logs.append(
+                        f"File: {os.path.basename(ref)}\n"
+                        f"Original size: {img.width}x{img.height}\n"
+                        f"Mode: {getattr(settings, 'fit_mode', 'cover')}\n"
+                        f"Stage 1 (height): {round(img.width * getattr(settings, 'target_size', (1920,1080))[1] / img.height)}x{getattr(settings, 'target_size', (1920,1080))[1]}\n"
+                        f"Stage 2 (canvas): {transformed.width}x{transformed.height}"
+                    )
+                    continue
+
             _copy_resolved_asset(src, ref, scenario_root, copied, destinations, conflicts)
         elif not any(ref in _voice_bank_references(state.get("voice_bank")) for state in states):
             missing.append(ref)
@@ -252,7 +305,7 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str) -> Tuple[List[s
 
     missing = sorted(set(missing), key=str.lower)
     conflicts = sorted(set(conflicts), key=str.lower)
-    return sorted(set(copied), key=str.lower), missing, conflicts
+    return sorted(set(copied), key=str.lower), missing, conflicts, transform_logs
 
 
 def _write_text(path: str, text: str):
@@ -433,7 +486,7 @@ def _write_config_meta(config_root: str, parsed: dict, legacy_meta: dict, mod_na
 
 
 def _write_conversion_debug(path: str, parsed: dict, timeline: Timeline, changes, collisions, notes,
-                            results: dict, copied: List[str], missing_assets: List[str]):
+                            results: dict, copied: List[str], missing_assets: List[str], transform_logs: List[str] | None = None):
     lines = [
         "BeatBangerConverter2 conversion diagnostics",
         "=" * 60,
@@ -464,13 +517,18 @@ def _write_conversion_debug(path: str, parsed: dict, timeline: Timeline, changes
     if missing_assets:
         lines.append("MISSING ASSETS")
         lines.extend("  " + x for x in missing_assets)
+    if transform_logs:
+        lines.append("")
+        lines.append("BACKGROUND TRANSFORM")
+        lines.append("--------------------")
+        lines.extend(transform_logs)
     _write_text(path, "\n".join(lines) + "\n")
 
 
 
 def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str] = None,
                       include_last_transition: bool = True, copy_assets_flag: bool = True,
-                      scenario_name: Optional[str] = None, interactive_sheets: bool = True):
+                      scenario_name: Optional[str] = None, background_transform: BackgroundTransform | dict | None = None, interactive_sheets: bool = True):
     input_mod = os.path.abspath(input_mod)
     output_mod = os.path.abspath(output_mod)
     if not os.path.isdir(input_mod):
@@ -512,9 +570,12 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     missing_assets: List[str] = []
     asset_conflicts: List[str] = []
     if copy_assets_flag:
-        copied, missing_assets, asset_conflicts = copy_assets(parsed, assets_dir, scenario_root)
+        # Collect background references so copy_assets can transform them when requested
+        background_refs = set(k.path for k in backgrounds.keyframes if getattr(k, "path", None))
+        copied, missing_assets, asset_conflicts, transform_logs = copy_assets(parsed, assets_dir, scenario_root, background_transform=background_transform, background_refs=background_refs)
     else:
         missing_assets = collect_referenced_assets(parsed)
+        transform_logs = []
 
     write_release_chart(os.path.join(config_root, "notes.cfg"), notes, name="Normal", icon="icon1.png", rating=0)
     write_release_keyframes(
@@ -544,7 +605,7 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
         "background": backgrounds,
         "voice_banks": voice_banks,
     }
-    _write_conversion_debug(debug_path, parsed, timeline, changes, collisions, notes, results, copied, missing_assets + asset_conflicts)
+    _write_conversion_debug(debug_path, parsed, timeline, changes, collisions, notes, results, copied, missing_assets + asset_conflicts, transform_logs=transform_logs)
 
     warnings = list(timeline.warnings) + meta_warnings
     errors: List[str] = []

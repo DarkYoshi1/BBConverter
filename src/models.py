@@ -52,3 +52,12 @@ class Timeline:
         if self.events:
             return max(e.frame for e in self.events)
         return None
+
+
+@dataclass(frozen=True)
+class BackgroundTransform:
+    enabled: bool = False
+    target_size: tuple[int, int] = (1920, 1080)
+    fit_mode: str = "cover"
+    crop_position: str = "center"
+    allow_upscale: bool = True
