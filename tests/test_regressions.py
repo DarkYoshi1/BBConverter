@@ -123,7 +123,7 @@ def test_last_transition_animation_asset_is_checked(tmp_path):
     assert "Final.png" in result.missing_assets
 
 
-def test_asset_basename_collision_is_reported(tmp_path):
+def test_asset_basename_collision_is_renamed_and_references_are_updated(tmp_path):
     mod = tmp_path / "Legacy"
     mod.mkdir()
     (mod / "A").mkdir()
@@ -145,8 +145,49 @@ last_transition = {}
 ''', encoding="utf-8")
     out = tmp_path / "Release"
     summary, issues = build_release_mod(str(mod), str(out), interactive_sheets=False)
-    assert summary["asset_conflicts_count"] == 1
-    assert any("Asset basename collision" in e for e in issues["errors"])
+    scenario_images = out / "Collision" / "images"
+    assert (scenario_images / "same.png").read_bytes() == b"a"
+    assert (scenario_images / "same__B.png").read_bytes() == b"b"
+    keyframes = (out / "Collision" / "config" / "keyframes.cfg").read_text(encoding="utf-8")
+    assert '"normal": "same.png"' in keyframes
+    assert '"normal": "same__B.png"' in keyframes
+    assert summary["asset_conflicts_count"] == 0
+    assert not any("Asset basename collision" in e for e in issues["errors"])
+
+
+def test_voice_bank_basename_collisions_are_copied_and_referenced(tmp_path):
+    mod = tmp_path / "LegacyVoiceCollision"
+    (mod / "voice" / "moan1").mkdir(parents=True)
+    (mod / "voice" / "moan2").mkdir(parents=True)
+    (mod / "voice" / "moan1" / "1.ogg").write_bytes(b"voice one")
+    (mod / "voice" / "moan2" / "1.ogg").write_bytes(b"voice two")
+    (mod / "Idle.png").write_bytes(b"image")
+    (mod / "chart.cfg").write_text('''
+bpm = 120
+note_offset = 0
+half_spawn = [0]
+quarter_spawn = []
+eighth_spawn = []
+no_spawn = [16]
+last_beat = [16]
+name = "Voice Collision"
+song_path = "song.ogg"
+initial_data = {"animation": "Idle.png", "note_type": 1, "voice_bank": {"name": "moan1", "interval": 2}}
+transitions = {8: {"voice_bank": {"name": "moan2", "interval": 2}}}
+last_transition = {}
+''', encoding="utf-8")
+    (mod / "song.ogg").write_bytes(b"song")
+
+    out = tmp_path / "ReleaseVoiceCollision"
+    summary, issues = build_release_mod(str(mod), str(out), interactive_sheets=False)
+    audio_dir = out / "Voice Collision" / "audio"
+    assert (audio_dir / "1.ogg").read_bytes() == b"voice one"
+    assert (audio_dir / "1__moan2.ogg").read_bytes() == b"voice two"
+    keyframes = (out / "Voice Collision" / "config" / "keyframes.cfg").read_text(encoding="utf-8")
+    assert '"voice_paths": [\n        "1.ogg"' in keyframes
+    assert '"voice_paths": [\n        "1__moan2.ogg"' in keyframes
+    assert summary["asset_conflicts_count"] == 0
+    assert not issues["errors"]
 
 
 def test_release_metadata_places_creator_in_act_cfg_and_post_song_delay_in_settings(tmp_path):

@@ -201,30 +201,63 @@ def _asset_destination(name: str, scenario_root: str) -> str:
     return os.path.join(scenario_root, subdir, os.path.basename(str(name)))
 
 
-def _copy_resolved_asset(src: str, name: str, scenario_root: str, copied: list[str], destinations: dict[str, str], errors: list[str]) -> None:
-    destination = _asset_destination(name, scenario_root)
+def _asset_name_for_copy(src: str, name: str, destinations: dict[str, str]) -> tuple[str, bool]:
+    """Return a unique output basename and whether an identical source exists."""
+    original = os.path.basename(str(name))
+    key = os.path.normcase(original)
+    source = os.path.abspath(src)
+    previous = destinations.get(key)
+    if previous is None or previous == source:
+        return original, previous == source
+
+    source_hash = hashlib.sha256(Path(source).read_bytes()).hexdigest()
+    previous_hash = hashlib.sha256(Path(previous).read_bytes()).hexdigest()
+    if source_hash == previous_hash:
+        return original, True
+
+    stem, extension = os.path.splitext(original)
+    parent = Path(source).parent.name
+    parent_suffix = "".join(char if char.isalnum() or char in "-_" else "_" for char in parent).strip("_") or "asset"
+    candidate = f"{stem}__{parent_suffix}{extension}"
+    candidate_key = os.path.normcase(candidate)
+    current = destinations.get(candidate_key)
+    if current is None:
+        return candidate, False
+    if current == source:
+        return candidate, True
+    if hashlib.sha256(Path(current).read_bytes()).hexdigest() == source_hash:
+        return candidate, True
+
+    # Same parent folder names can occur in different branches. A stable source
+    # path suffix keeps the original basename visible and guarantees uniqueness.
+    path_suffix = hashlib.sha256(source.encode("utf-8")).hexdigest()[:8]
+    candidate = f"{stem}__{parent_suffix}_{path_suffix}{extension}"
+    candidate_key = os.path.normcase(candidate)
+    counter = 2
+    while candidate_key in destinations and destinations[candidate_key] != source:
+        candidate = f"{stem}__{parent_suffix}_{path_suffix}_{counter}{extension}"
+        candidate_key = os.path.normcase(candidate)
+        counter += 1
+    return candidate, candidate_key in destinations
+
+
+def _copy_resolved_asset(src: str, name: str, scenario_root: str, copied: list[str], destinations: dict[str, str], errors: list[str]) -> str:
+    basename, already_copied = _asset_name_for_copy(src, name, destinations)
+    destination = _asset_destination(basename, scenario_root)
+    key = os.path.normcase(basename)
+    if already_copied:
+        return basename
     os.makedirs(os.path.dirname(destination), exist_ok=True)
-    key = os.path.normcase(os.path.basename(destination))
-    if key in destinations:
-        previous = destinations[key]
-        if previous == os.path.abspath(src):
-            return
-        # Release stores these files flat. Two different source files with the
-        # same basename cannot both be represented without changing references.
-        old_hash = hashlib.sha256(Path(previous).read_bytes()).hexdigest()
-        new_hash = hashlib.sha256(Path(src).read_bytes()).hexdigest()
-        if old_hash != new_hash:
-            errors.append(f"Asset basename collision for '{os.path.basename(destination)}': '{previous}' vs '{src}'.")
-            return
-        return
     shutil.copy2(src, destination)
     destinations[key] = os.path.abspath(src)
     copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
+    return basename
 
 
 def copy_assets(parsed: dict, src_root: str, scenario_root: str,
                 background_transform: BackgroundTransform | dict | None = None,
-                background_refs: set[str] | None = None) -> Tuple[List[str], List[str], List[str], List[str]]:
+                background_refs: set[str] | None = None,
+                asset_name_map: dict[str, str] | None = None) -> Tuple[List[str], List[str], List[str], List[str]]:
     copied: list[str] = []
     missing: list[str] = []
     conflicts: list[str] = []
@@ -260,16 +293,20 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str,
                     settings = BackgroundTransform(**background_transform)
                 if getattr(settings, "enabled", False):
                     transformed = transform_background(img, settings)
-                    destination = _asset_destination(ref, scenario_root)
+                    output_name, already_copied = _asset_name_for_copy(src, ref, destinations)
+                    destination = _asset_destination(output_name, scenario_root)
                     os.makedirs(os.path.dirname(destination), exist_ok=True)
                     # Save a fully materialized image so the output dimensions
                     # are exactly the dimensions produced by the scaler.
                     if transformed.mode == "P":
                         transformed = transformed.convert("RGBA")
                     transformed.save(destination)
-                    key = os.path.normcase(os.path.basename(destination))
+                    key = os.path.normcase(output_name)
                     destinations[key] = os.path.abspath(src)
-                    copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
+                    if not already_copied:
+                        copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
+                    if asset_name_map is not None:
+                        asset_name_map[os.path.abspath(src)] = output_name
                     target_width, target_height = getattr(settings, "target_size", (1920, 1080))
                     scale = min(target_width / img.width, target_height / img.height)
                     scaled_size = (round(img.width * scale), round(img.height * scale))
@@ -283,7 +320,9 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str,
                     )
                     continue
 
-            _copy_resolved_asset(src, ref, scenario_root, copied, destinations, conflicts)
+            output_name = _copy_resolved_asset(src, ref, scenario_root, copied, destinations, conflicts)
+            if asset_name_map is not None:
+                asset_name_map[os.path.abspath(src)] = output_name
         elif not any(ref in _voice_bank_references(state.get("voice_bank")) for state in states):
             missing.append(ref)
 
@@ -300,7 +339,9 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str,
             if key in seen_voice_files:
                 continue
             seen_voice_files.add(key)
-            _copy_resolved_asset(src, os.path.basename(src), scenario_root, copied, destinations, conflicts)
+            output_name = _copy_resolved_asset(src, os.path.basename(src), scenario_root, copied, destinations, conflicts)
+            if asset_name_map is not None:
+                asset_name_map[os.path.abspath(src)] = output_name
         if value:
             # A non-empty bank must resolve at least one concrete audio file.
             normalized = [x for x in files if os.path.isfile(x)]
@@ -310,6 +351,32 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str,
     missing = sorted(set(missing), key=str.lower)
     conflicts = sorted(set(conflicts), key=str.lower)
     return sorted(set(copied), key=str.lower), missing, conflicts, transform_logs
+
+
+def _remap_converted_asset_references(results: dict, assets_dir: str, asset_name_map: dict[str, str]) -> None:
+    """Point generated Release records at collision-safe copied filenames."""
+    def remap(value):
+        if isinstance(value, str):
+            source = resolve_asset(value, assets_dir)
+            return asset_name_map.get(os.path.abspath(source), value) if source else value
+        if isinstance(value, list):
+            return [remap(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(remap(item) for item in value)
+        return value
+
+    for keyframe in getattr(results.get("animations"), "keyframes", []):
+        keyframe.animation = remap(keyframe.animation)
+    for keyframe in getattr(results.get("effects"), "keyframes", []):
+        keyframe.effect = remap(keyframe.effect)
+    for loop in getattr(results.get("sound_loops"), "loops", []):
+        loop.sound = remap(loop.sound)
+    audio = results.get("audio")
+    for attribute in ("triggers", "transition_sounds", "climax_sounds"):
+        for item in getattr(audio, attribute, []):
+            item.filename = remap(item.filename)
+    for keyframe in getattr(results.get("background"), "keyframes", []):
+        keyframe.path = remap(keyframe.path)
 
 
 def _write_text(path: str, text: str):
@@ -560,12 +627,10 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     loops = convert_sound_loops(parsed, timeline=timeline)
     audio = convert_sound_fx(parsed, timeline=timeline)
     backgrounds = convert_backgrounds(parsed, timeline)
-    voice_banks = convert_voice_banks(parsed, timeline=timeline, assets_dir=assets_dir)
 
     check_effect_assets(effects, assets_dir)
     check_sfx_assets(audio, assets_dir)
     check_loop_assets(loops, assets_dir)
-    check_vb_assets(voice_banks, assets_dir)
     anim_asset_result = []
     from .animation_converter import check_assets as check_animation_assets
     check_animation_assets(anim, assets_dir)
@@ -573,13 +638,37 @@ def build_release_mod(input_mod: str, output_mod: str, assets_dir: Optional[str]
     copied: List[str] = []
     missing_assets: List[str] = []
     asset_conflicts: List[str] = []
+    asset_name_map: dict[str, str] = {}
     if copy_assets_flag:
         # Collect background references so copy_assets can transform them when requested
         background_refs = set(k.path for k in backgrounds.keyframes if getattr(k, "path", None))
-        copied, missing_assets, asset_conflicts, transform_logs = copy_assets(parsed, assets_dir, scenario_root, background_transform=background_transform, background_refs=background_refs)
+        copied, missing_assets, asset_conflicts, transform_logs = copy_assets(
+            parsed,
+            assets_dir,
+            scenario_root,
+            background_transform=background_transform,
+            background_refs=background_refs,
+            asset_name_map=asset_name_map,
+        )
     else:
         missing_assets = collect_referenced_assets(parsed)
         transform_logs = []
+
+    voice_banks = convert_voice_banks(
+        parsed,
+        timeline=timeline,
+        assets_dir=assets_dir,
+        asset_name_map=asset_name_map if copy_assets_flag else None,
+    )
+    check_vb_assets(voice_banks, assets_dir)
+    if copy_assets_flag:
+        _remap_converted_asset_references({
+            "animations": anim,
+            "effects": effects,
+            "sound_loops": loops,
+            "audio": audio,
+            "background": backgrounds,
+        }, assets_dir, asset_name_map)
 
     write_release_chart(os.path.join(config_root, "notes.cfg"), notes, name="Normal", icon="icon1.png", rating=0)
     write_release_keyframes(

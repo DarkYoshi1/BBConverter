@@ -38,7 +38,8 @@ def _iter_voice_banks(value: Any) -> List[Dict[str, Any]]:
     return []
 
 
-def _normalize(data: Any, assets_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def _normalize(data: Any, assets_dir: Optional[str] = None,
+               asset_name_map: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
     if not isinstance(data, dict) or not data:
         return None
 
@@ -51,7 +52,14 @@ def _normalize(data: Any, assets_dir: Optional[str] = None) -> Optional[Dict[str
     else:
         paths = []
 
-    if not paths and assets_dir:
+    if assets_dir and asset_name_map:
+        resolved = resolve_voice_bank_files(out, assets_dir)
+        mapped_paths = [asset_name_map.get(os.path.abspath(path)) for path in resolved]
+        if resolved and all(mapped_paths):
+            paths = mapped_paths
+        elif not paths:
+            paths = [os.path.basename(path) for path in resolved]
+    elif not paths and assets_dir:
         resolved = resolve_voice_bank_files(out, assets_dir)
         paths = [os.path.basename(path) for path in resolved]
 
@@ -80,14 +88,15 @@ def _normalize(data: Any, assets_dir: Optional[str] = None) -> Optional[Dict[str
     return out
 
 
-def convert_voice_banks(parsed: dict, timeline: Optional[Timeline] = None, assets_dir: Optional[str] = None) -> VoiceBankResult:
+def convert_voice_banks(parsed: dict, timeline: Optional[Timeline] = None, assets_dir: Optional[str] = None,
+                        asset_name_map: Optional[Dict[str, str]] = None) -> VoiceBankResult:
     timeline = timeline or Timeline(float(parsed["bpm"]), float(parsed["note_offset"]), parsed.get("last_beat"), [])
     res = VoiceBankResult()
     active_voice_bank = False
 
     initial = parsed.get("initial_data") or {}
     for bank in _iter_voice_banks(initial.get("voice_bank")):
-        data = _normalize(bank, assets_dir)
+        data = _normalize(bank, assets_dir, asset_name_map)
         if data:
             res.entries.append(VoiceBankEntry(0, timeline.frame_to_timestamp(0), data))
             active_voice_bank = True
@@ -107,7 +116,7 @@ def convert_voice_banks(parsed: dict, timeline: Optional[Timeline] = None, asset
             continue
         wrote = False
         for bank in banks:
-            data = _normalize(bank, assets_dir)
+            data = _normalize(bank, assets_dir, asset_name_map)
             if data:
                 res.entries.append(VoiceBankEntry(int(frame), timeline.frame_to_timestamp(int(frame)), data))
                 active_voice_bank = True
@@ -124,7 +133,7 @@ def convert_voice_banks(parsed: dict, timeline: Optional[Timeline] = None, asset
         last_frame = timeline.final_frame()
         if last_frame is not None:
             for bank in _iter_voice_banks(last.get("voice_bank")):
-                data = _normalize(bank, assets_dir)
+                data = _normalize(bank, assets_dir, asset_name_map)
                 if data:
                     res.entries.append(VoiceBankEntry(last_frame, timeline.frame_to_timestamp(last_frame), data))
                 else:
