@@ -1,5 +1,7 @@
 # Beat Banger Legacy → Release Converter
 
+![BeatBangerConverter](logo.png)
+
 A conversion tool for bringing Legacy Beat Banger mods into the Release mod layout used by the game.
 
 This project reads a Legacy `chart.cfg` and related assets, resolves the conversion rules, and writes a Release-ready directory structure with notes, animations, effects, metadata, audio, backgrounds, and validation diagnostics.
