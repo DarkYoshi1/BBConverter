@@ -1,11 +1,32 @@
 # Beat Banger Legacy → Release Converter
 
-This project converts Legacy Beat Banger mods into the Release mod layout used by the game. The implementation is organized around a small root entry point and a dedicated `src/` package, while examples and runtime defaults live under the project root.
+A conversion tool for bringing Legacy Beat Banger mods into the Release mod layout used by the game.
 
-## Project layout
+This project reads a Legacy `chart.cfg` and related assets, resolves the conversion rules, and writes a Release-ready directory structure with notes, animations, effects, metadata, audio, backgrounds, and validation diagnostics.
+
+The current entry point is the repository-root `main.py`, which delegates to the conversion pipeline under `src/` and can also launch the PySide6 mod library GUI.
+
+## What the converter does
+
+The pipeline is designed to preserve the legacy timing and structure as closely as possible while generating a mod in the Release format expected by the game.
+
+It handles:
+
+- note data and state transitions
+- animations and keyframes
+- sprite-sheet effects and effect overrides
+- background conversion and scaling
+- sound loops and one-shot audio events
+- voice-bank resolution and asset validation
+- Release metadata, scenario config, and output organization
+- debug summaries, warnings, and error reporting for each conversion
+
+The tool also supports a library workflow where a folder containing multiple Legacy mods can be scanned and converted one by one from a GUI.
+
+## Project structure
 
 ```text
-converter/
+BBConverter/
 ├── README.md
 ├── main.py
 ├── chart.cfg
@@ -20,6 +41,7 @@ converter/
 │   ├── animation_converter.py
 │   ├── asset_resolver.py
 │   ├── background_converter.py
+│   ├── background_scaler.py
 │   ├── comparator.py
 │   ├── convert_mod.py
 │   ├── converter.py
@@ -30,11 +52,12 @@ converter/
 │   ├── mod_library.py
 │   ├── models.py
 │   ├── note_generator.py
+│   ├── pyside_app.py
 │   ├── release_writer.py
 │   ├── sound_fx_converter.py
 │   ├── sound_loop_converter.py
 │   ├── timeline.py
-│   ├── pyside_app.py
+│   ├── tkinter_app.py
 │   ├── validate_against_ground_truth.py
 │   └── voice_bank_converter.py
 ├── tests/
@@ -42,27 +65,27 @@ converter/
 │   ├── run_converters_test.py
 │   ├── test_animation_converter.py
 │   ├── test_asset_checks.py
+│   ├── test_background_scaler.py
 │   ├── test_full_conversion.py
 │   ├── test_mod_library.py
+│   ├── test_pyside_gui.py
 │   ├── test_regressions.py
-│   └── test_pyside_gui.py
+│   └── test_tkinter_gui.py
 ├── tools/
 │   ├── batch_convert.py
 │   └── generate_sheet_overrides.py
-├── .venv/
 ├── build/
+├── .venv/
 ├── .pytest_cache/
 └── __pycache__/
 ```
 
-The main logic lives under `src/`. The root-level `main.py` is the current CLI entry point and delegates to `src.convert_mod` and `src.pyside_app`.
-
 ## Requirements
 
 - Python 3.10+
-- PySide6 for the GUI
-- Pillow for sprite-sheet inspection and thumbnails
-- pytest for running tests
+- PySide6 for the GUI and library interface
+- Pillow for sprite-sheet inspection and thumbnail generation
+- pytest for automated validation
 
 Install dependencies:
 
@@ -70,23 +93,23 @@ Install dependencies:
 python -m pip install PySide6 Pillow pytest
 ```
 
-## Usage
+## Quick start
 
-The input must be a Legacy mod folder containing `chart.cfg`. `meta.cfg` is optional.
+The input must be a Legacy mod directory containing a `chart.cfg`. `meta.cfg` is optional and may help with metadata, but not all Legacy mods require it.
 
-### Basic conversion
+### Convert a single mod from the CLI
 
 ```bash
 python main.py /path/to/legacy_mod /path/to/output
 ```
 
-If no output path is provided, a sibling folder with the `_Release` suffix is created:
+If the output path is omitted, the tool writes a sibling folder with the `_Release` suffix.
 
 ```bash
 python main.py /path/to/legacy_mod
 ```
 
-### Separate assets directory
+### Use a separate assets directory
 
 ```bash
 python main.py \
@@ -95,7 +118,7 @@ python main.py \
   --assets-dir /path/to/assets
 ```
 
-### Skip asset copying
+### Skip copying referenced assets
 
 ```bash
 python main.py \
@@ -104,7 +127,7 @@ python main.py \
   --no-copy-assets
 ```
 
-### Disable interactive effect sheet prompts
+### Skip interactive effect-sheet prompts
 
 ```bash
 python main.py \
@@ -113,7 +136,7 @@ python main.py \
   --no-interactive
 ```
 
-### Omit `last_transition`
+### Omit the final `last_transition`
 
 ```bash
 python main.py \
@@ -122,7 +145,7 @@ python main.py \
   --no-last-transition
 ```
 
-### Customize the scenario folder name
+### Customize the generated scenario folder name
 
 ```bash
 python main.py \
@@ -131,114 +154,146 @@ python main.py \
   --scenario-name "Girl Brat"
 ```
 
-### Open the GUI
+### Launch the GUI/mod library
 
 ```bash
 python main.py --gui
 ```
 
-## GUI / mod library
+## Command-line options
 
-The PySide6 interface operates as a small mod library and conversion dashboard:
+The CLI is exposed by `main.py` and supports the following flow:
 
-- choose a folder containing multiple Legacy mods
-- persist the library path in user config
-- discover mods automatically
-- view conversion cards with thumbnails and metadata
-- convert individual mods from the library view
-- refresh the list and keep the UI responsive while conversion runs in the background (each conversion runs on a `QThread`, off the UI thread)
-- set optional assets directory / scenario name overrides directly from the GUI
-- toggle "skip copying assets", "skip interactive sheet prompts", and "include final last_transition" from the options panel
+```bash
+python main.py [--gui] [input_mod] [output_mod] [options]
+```
 
-### Built-in debugger
+Available options:
 
-The bottom panel has two tabs:
+- `--gui`: open the PySide6 mod library interface instead of running a one-off conversion
+- `input_mod`: Legacy mod folder to read
+- `output_mod`: destination Release folder; defaults to `<input_mod>_Release`
+- `--assets-dir`: directory containing the Legacy assets; defaults to the mod folder itself
+- `--no-copy-assets`: do not copy referenced assets into the output
+- `--no-interactive`: skip prompts for unknown effect sprite-sheet layouts
+- `--no-last-transition`: omit the final `last_transition` state
+- `--scenario-name`: set the scenario folder name in the generated Release output
 
-- **Activity log** — a running, timestamped log of everything the GUI does, same as before.
-- **Debugger** — a dedicated diagnostics view with:
-  - a **history list** of every conversion run this session (colored ✔/⚠/✖ by outcome), so you can revisit any past run without re-converting
-  - a **Summary** tab showing the structured summary dict (notes/animations/effects/warnings/errors counts, output paths, etc.) in a table, with error/warning counts highlighted
-  - a **Warnings** tab and an **Errors** tab listing each issue individually
-  - a **Raw debug log** tab showing the full `_conversion_debug.txt` diagnostic report (interval changes, collisions, per-note conversion log) in a monospaced, searchable text view with find next/previous
+## GUI and mod library
 
-The library settings are stored under:
+The repository includes a PySide6 interface that acts as a small mod library and conversion dashboard.
+
+The GUI can:
+
+- select a library folder containing multiple Legacy mods
+- discover direct child mods automatically
+- persist the library path in user settings
+- show mod cards with thumbnails and metadata
+- convert individual mods from the library list
+- refresh the library while keeping the interface responsive
+- run conversions off the UI thread with background processing
+- override assets directory and scenario name per conversion
+- toggle asset-copy behavior, interactive sheet prompts, and final-transition inclusion
+
+The project stores library settings in:
 
 ```text
 ~/.config/BeatBangerConverter7/settings.json
 ```
 
-or:
+or, when `XDG_CONFIG_HOME` is defined:
 
 ```text
 $XDG_CONFIG_HOME/BeatBangerConverter7/settings.json
 ```
 
-when `XDG_CONFIG_HOME` is defined.
+## Built-in debug and diagnostics
 
-## What the converter handles
+Each conversion generates a debug log with the output name pattern:
 
-The current pipeline covers:
+```text
+<output>_conversion_debug.txt
+```
 
-- notes and their state transitions
-- animations and keyframes
-- sprite-sheet visual effects
-- backgrounds
-- audio loops and one-shot events
-- voice banks
-- Release metadata and configuration files
-- validation and safe copying of referenced assets
+The debug log includes details such as:
 
-The generated Release output keeps the scenario folder structure expected by the game and flattens asset files into the corresponding `images/` and `audio/` directories.
+- BPM and offset values
+- note/timeline data and last-beat calculations
+- counts of notes and state changes
+- collision or spawn-state warnings
+- generated effects and loops
+- copied vs. missing assets
+- voice-bank resolution details
+- conversion summary and issue lists
+
+The GUI debugger panel exposes:
+
+- an activity log with timestamped events
+- a session history of conversion runs with pass/warn/fail badges
+- a summary view with structured counts for notes, animations, effects, warnings, and errors
+- dedicated warning/error tabs
+- a raw debug log viewer with monospaced output and simple search navigation
 
 ## Timing model
 
-The converter uses a shared timeline for notes, animations, effects, audio, backgrounds, and voice banks. The frame-to-time conversion follows the same rule across the pipeline:
+The project uses a shared timeline across notes, animations, effects, audio, backgrounds, and voice banks.
+
+The conversion follows the same frame-to-time logic throughout the pipeline:
 
 ```python
 seconds_per_frame = 30 / BPM
 timestamp = frame * seconds_per_frame - note_offset
 ```
 
-Negative timestamps are clamped to `0.0` and recorded as warnings when needed. The generated `settings.cfg` intentionally keeps `song_offset` at `0.0` to avoid double-applying the Legacy offset.
+Negative timestamps are clamped to `0.0` and logged as warnings when needed. The generated `settings.cfg` intentionally keeps `song_offset` at `0.0` to avoid double-applying the Legacy offset.
 
-## Diagnostics and validation
+## Output structure
 
-Each conversion produces a debug log such as:
+The converter writes a Release-like folder structure expected by the game and flattens assets into the matching `images/` and `audio/` directories.
 
-```text
-<output>_conversion_debug.txt
-```
+A generated mod typically contains the scenario folder, config files, and flattened asset folders required by the build. The exact naming of the output directory depends on the chosen destination path and optional scenario override.
 
-It includes details such as:
+## Default configuration and overrides
 
-- BPM and note offset
-- last beat and timeline data
-- counts of notes and state changes
-- colliding spawn states and warnings
-- generated effects and loops
-- copied vs. missing assets
-- voice-bank resolution details
-- summary of conversion issues
+The project includes default config files under `config/` and also supports override files such as:
 
-## Tests
+- `chart.cfg`
+- `effect_overrides.json`
+- `sheet_overrides.json`
 
-Run the project test suite with:
+These defaults are used when the app runs in packaged or dev mode, and can be refreshed automatically when the app creates the config directory on first use.
+
+## Running tests
+
+The project includes a pytest suite covering converters, assets, full conversion flows, GUI behavior, and regression checks.
+
+Run the full suite:
 
 ```bash
 pytest -q
 ```
 
-The conversion helper script is also available:
+Or run the repository helper script:
 
 ```bash
 python tests/run_converters_test.py
 ```
 
-## Build notes
+## Development workflow
+
+When extending support for a Legacy property:
+
+1. compare it against a real mod and the corresponding Release format
+2. update the relevant parser or converter layer
+3. add or update a regression test
+4. run the focused validation suite
+5. validate the output on a real sample mod when possible
+
+## Building a standalone executable
 
 The project can be packaged with Nuitka for standalone execution.
 
-Example for Linux:
+Linux example:
 
 ```bash
 python -m venv .venv
@@ -247,7 +302,7 @@ python -m pip install -U "Nuitka[app]" Pillow
 python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build main.py
 ```
 
-On Windows:
+Windows example:
 
 ```powershell
 py -m venv .venv
@@ -256,19 +311,9 @@ python -m pip install -U "Nuitka[app]" Pillow
 python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build main.py
 ```
 
-## Development workflow
-
-When adding support for a new Legacy property:
-
-1. compare against a real mod and the corresponding Release format
-2. implement the conversion in the relevant parser or converter
-3. add a regression test covering the behavior
-4. run the focused validation suite
-5. verify the result on a real mod sample
-
 ## Known limitations
 
-Some Release fields cannot be reconstructed exactly from Legacy data alone. In those cases the converter intentionally records the uncertainty instead of inventing unsupported values.
+Some Release values cannot be reconstructed exactly from Legacy data alone. When that happens, the converter prefers to preserve the uncertainty in the diagnostic output rather than invent unsupported values.
 
 ## License
 
