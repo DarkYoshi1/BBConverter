@@ -431,9 +431,6 @@ def launch_gui():
             # Background transform options
             self.bg_transform_cb = QCheckBox("Adapt Legacy backgrounds to 1920×1080")
             checks_row.addWidget(self.bg_transform_cb)
-            self.bg_allow_upscale_cb = QCheckBox("Allow upscaling of small images")
-            self.bg_allow_upscale_cb.setChecked(True)
-            checks_row.addWidget(self.bg_allow_upscale_cb)
             checks_row.addStretch(1)
             options_layout.addLayout(checks_row)
 
@@ -454,8 +451,8 @@ def launch_gui():
             try:
                 from PySide6.QtWidgets import QComboBox
                 self.bg_mode_combo = QComboBox()
-                self.bg_mode_combo.addItems(["cover", "cover_height", "contain"])
-                self.bg_mode_combo.setCurrentText("cover_height")
+                self.bg_mode_combo.addItems(["contain", "cover"])
+                self.bg_mode_combo.setCurrentText("contain")
                 self.bg_pos_combo = QComboBox()
                 self.bg_pos_combo.addItems(["top", "center", "bottom"])
                 self.bg_pos_combo.setCurrentText("center")
@@ -513,7 +510,7 @@ def launch_gui():
                 pass
             if self.bg_mode_combo:
                 try:
-                    self.bg_mode_combo.setCurrentText(str(bg_cfg.get("fit_mode") or "cover"))
+                    self.bg_mode_combo.setCurrentText(str(bg_cfg.get("fit_mode") or "contain"))
                 except Exception:
                     pass
             if self.bg_pos_combo:
@@ -521,18 +518,13 @@ def launch_gui():
                     self.bg_pos_combo.setCurrentText(str(bg_cfg.get("crop_position") or "center"))
                 except Exception:
                     pass
-            try:
-                self.bg_allow_upscale_cb.setChecked(bool(bg_cfg.get("allow_upscale", True)))
-            except Exception:
-                pass
             # save settings when changed
             def _save_bg_settings():
                 cfg = {
                     "enabled": bool(self.bg_transform_cb.isChecked()),
                     "target_size": [1920, 1080],
-                    "fit_mode": (self.bg_mode_combo.currentText() if self.bg_mode_combo else "cover"),
+                    "fit_mode": (self.bg_mode_combo.currentText() if self.bg_mode_combo else "contain"),
                     "crop_position": (self.bg_pos_combo.currentText() if self.bg_pos_combo else "center"),
-                    "allow_upscale": bool(self.bg_allow_upscale_cb.isChecked()),
                 }
                 self.settings["background_transform"] = cfg
                 try:
@@ -545,7 +537,6 @@ def launch_gui():
                 self.bg_mode_combo.currentIndexChanged.connect(lambda _: _save_bg_settings())
             if self.bg_pos_combo:
                 self.bg_pos_combo.currentIndexChanged.connect(lambda _: _save_bg_settings())
-            self.bg_allow_upscale_cb.stateChanged.connect(lambda _: _save_bg_settings())
 
         # -- library handling ---------------------------------------------
         def _choose_assets_dir(self):

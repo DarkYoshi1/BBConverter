@@ -270,12 +270,16 @@ def copy_assets(parsed: dict, src_root: str, scenario_root: str,
                     key = os.path.normcase(os.path.basename(destination))
                     destinations[key] = os.path.abspath(src)
                     copied.append(os.path.relpath(destination, scenario_root).replace(os.sep, "/"))
+                    target_width, target_height = getattr(settings, "target_size", (1920, 1080))
+                    scale = min(target_width / img.width, target_height / img.height)
+                    scaled_size = (round(img.width * scale), round(img.height * scale))
                     transform_logs.append(
                         f"File: {os.path.basename(ref)}\n"
                         f"Original size: {img.width}x{img.height}\n"
-                        f"Mode: {getattr(settings, 'fit_mode', 'cover')}\n"
-                        f"Stage 1 (height): {round(img.width * getattr(settings, 'target_size', (1920,1080))[1] / img.height)}x{getattr(settings, 'target_size', (1920,1080))[1]}\n"
-                        f"Stage 2 (canvas): {transformed.width}x{transformed.height}"
+                        f"Target size: {target_width}x{target_height}\n"
+                        f"Mode: {getattr(settings, 'fit_mode', 'contain')}\n"
+                        f"Scaled image: {scaled_size[0]}x{scaled_size[1]}\n"
+                        f"Final canvas: {transformed.width}x{transformed.height} (black bars)"
                     )
                     continue
 

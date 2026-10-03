@@ -88,32 +88,32 @@ def resize_cover(image: Image.Image, target_size: Tuple[int, int], position: str
     return resized.crop((left, top, left + tw, top + th))
 
 
-def transform_cover_height(image: Image.Image, target_size: Tuple[int, int] = (1920, 1080), position: str = "center", allow_upscale: bool = True) -> Image.Image:
-    """Scale to target HEIGHT, then expand/crop only the CANVAS width.
-
-    Example: 600x800 -> 810x1080 -> 1920x1080.
-    The second stage NEVER calls resize() on the image content.
-    """
+def resize_contain(image: Image.Image, target_size: Tuple[int, int]) -> Image.Image:
+    """Fit the complete image inside a target canvas and pad the rest black."""
     tw, th = target_size
     if tw <= 0 or th <= 0:
         raise ValueError("target_size must contain positive dimensions")
-    if not allow_upscale and image.height < th:
-        # Explicitly retain old no-upscale behavior.
-        canvas = Image.new(image.mode if image.mode in {"RGB", "RGBA", "L", "LA"} else "RGBA", (tw, th))
-        src = image if canvas.mode == image.mode else image.convert(canvas.mode)
-        x = max(0, (tw - src.width) // 2)
-        y = max(0, (th - src.height) // 2)
-        canvas.paste(src, (x, y), src if src.mode in {"RGBA", "LA"} else None)
-        return canvas
+    if image.width <= 0 or image.height <= 0:
+        raise ValueError("image must have positive dimensions")
+    if image.size == (tw, th) and image.mode == "RGB":
+        return image.copy()
 
-    scaled = resize_to_height(image, th)
-    # IMPORTANT: scaled.height is already exactly th. This function must not
-    # resize it again; it only changes the horizontal canvas.
-    result = expand_to_width(scaled, tw, "left" if position == "left" else "right" if position == "right" else "center")
+    scale = min(tw / image.width, th / image.height)
+    nw = max(1, min(tw, round(image.width * scale)))
+    nh = max(1, min(th, round(image.height * scale)))
+    resized = image.resize((nw, nh), resample=_resample())
 
-    assert result.height == th, f"cover_height changed height unexpectedly: {result.size}"
-    assert result.width == tw, f"cover_height changed width unexpectedly: {result.size}"
-    return result
+    # The surrounding area is deliberately opaque black. Composite alpha onto
+    # black too, so transparent source pixels cannot reveal a non-black border.
+    rgba = resized.convert("RGBA")
+    black = Image.new("RGBA", (tw, th), (0, 0, 0, 255))
+    black.alpha_composite(rgba, ((tw - nw) // 2, (th - nh) // 2))
+    return black.convert("RGB")
+
+
+def transform_cover_height(image: Image.Image, target_size: Tuple[int, int] = (1920, 1080), position: str = "center", allow_upscale: bool = True) -> Image.Image:
+    """Backward-compatible name for fitting the whole image with black bars."""
+    return resize_contain(image, target_size)
 
 
 def transform_background(image: Image.Image, settings) -> Image.Image:
@@ -122,10 +122,11 @@ def transform_background(image: Image.Image, settings) -> Image.Image:
     target = tuple(getattr(settings, "target_size", (1920, 1080)))
     mode = getattr(settings, "fit_mode", "cover")
     position = getattr(settings, "crop_position", "center")
-    allow_upscale = getattr(settings, "allow_upscale", True)
 
-    if mode == "cover_height":
-        return transform_cover_height(image, target, position, allow_upscale)
+    if mode in {"contain", "cover_height"}:
+        # cover_height is accepted for compatibility with previously saved
+        # settings; the requested behavior is whole-image contain with black bars.
+        return transform_cover_height(image, target, position)
     if mode == "cover":
         return resize_cover(image, target, position)
     return resize_cover(image, target, position)

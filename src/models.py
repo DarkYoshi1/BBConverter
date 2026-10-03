@@ -58,6 +58,6 @@ class Timeline:
 class BackgroundTransform:
     enabled: bool = False
     target_size: tuple[int, int] = (1920, 1080)
-    fit_mode: str = "cover"
+    fit_mode: str = "contain"
     crop_position: str = "center"
     allow_upscale: bool = True
