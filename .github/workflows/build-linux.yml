@@ -1,0 +1,35 @@
+name: Build Linux executable
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build with Nuitka
+        run: bash build.sh
+
+      - name: Upload executable and config
+        uses: actions/upload-artifact@v4
+        with:
+          name: BBConverter-linux
+          path: |
+            build/BBConverter
+            build/config/
+          if-no-files-found: error

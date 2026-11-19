@@ -313,6 +313,12 @@ python -m pip install -U "Nuitka[app]" Pillow
 python -m nuitka --mode=standalone --follow-imports --include-package=PIL --output-dir=build main.py
 ```
 
+GitHub Actions builds one-file executables for Windows and Linux on pushes,
+pull requests, and manual runs, using the repository's `build.bat` and
+`build.sh` scripts. Download the corresponding `BBConverter-windows` or
+`BBConverter-linux` artifact from the completed workflow run. Each contains the
+executable and editable `config/` directory, which should stay next to it.
+
 ## Known limitations
 
 Some Release values cannot be reconstructed exactly from Legacy data alone. When that happens, the converter prefers to preserve the uncertainty in the diagnostic output rather than invent unsupported values.

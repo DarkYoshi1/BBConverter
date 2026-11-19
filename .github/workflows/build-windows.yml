@@ -1,0 +1,36 @@
+name: Build Windows executable
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build with Nuitka
+        shell: cmd
+        run: build.bat
+
+      - name: Upload executable and config
+        uses: actions/upload-artifact@v4
+        with:
+          name: BBConverter-windows
+          path: |
+            build/BBConverter.exe
+            build/config/
+          if-no-files-found: error
