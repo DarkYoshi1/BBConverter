@@ -317,7 +317,8 @@ GitHub Actions builds one-file executables for Windows and Linux on pushes,
 pull requests, and manual runs, using the repository's `build.bat` and
 `build.sh` scripts. Download the corresponding `BBConverter-windows` or
 `BBConverter-linux` artifact from the completed workflow run. Each contains the
-executable and editable `config/` directory, which should stay next to it.
+executable and editable `config/` directory, which should stay next to it. The
+builds fail if compilation fails or any required output is missing or empty.
 
 ## Known limitations
 

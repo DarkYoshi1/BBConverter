@@ -25,6 +25,20 @@ jobs:
       - name: Build with Nuitka
         run: bash build.sh
 
+      - name: Verify build outputs
+        run: |
+          set -euo pipefail
+          for file in build/BBConverter build/config/effect_overrides.json build/config/sheet_overrides.json build/config/chart.cfg; do
+            if [[ ! -s "$file" ]]; then
+              echo "[build] ERROR: Required build output is missing or empty: $file" >&2
+              exit 1
+            fi
+          done
+          if [[ ! -x build/BBConverter ]]; then
+            echo "[build] ERROR: build/BBConverter is not executable" >&2
+            exit 1
+          fi
+
       - name: Upload executable and config
         uses: actions/upload-artifact@v4
         with:

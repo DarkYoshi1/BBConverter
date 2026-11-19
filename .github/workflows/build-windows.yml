@@ -26,6 +26,24 @@ jobs:
         shell: cmd
         run: build.bat
 
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          $requiredFiles = @(
+            "build/BBConverter.exe",
+            "build/config/effect_overrides.json",
+            "build/config/sheet_overrides.json",
+            "build/config/chart.cfg"
+          )
+          foreach ($file in $requiredFiles) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+              throw "Required build output is missing: $file"
+            }
+            if ((Get-Item -LiteralPath $file).Length -le 0) {
+              throw "Required build output is empty: $file"
+            }
+          }
+
       - name: Upload executable and config
         uses: actions/upload-artifact@v4
         with:
